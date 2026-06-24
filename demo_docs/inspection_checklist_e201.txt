@@ -1,0 +1,28 @@
+================================================================================
+REFINERY MAINTENANCE & INSPECTION DEPARTMENT
+EQUIPMENT INSPECTION CHECKLIST - STATIC EQUIPMENT
+EQUIPMENT ID: E-201 (SHELL & TUBE HEAT EXCHANGER)
+================================================================================
+
+INSPECTION TYPE: Routine Annual Integrity Audit
+INSPECTION DATE: 18-June-2024
+INSPECTED BY: John Doe (Senior Mechanical Inspector)
+
+--------------------------------------------------------------------------------
+Audit Parameter                 | Status   | Notes / Measurements
+--------------------------------------------------------------------------------
+1. Shell Thickness Check        | PASSED   | Nominal thickness 12.5mm. Measured min 12.1mm.
+2. Tube Bundle Fouling          | WARNING  | Minor carbon scaling observed. Cleaned in situ.
+3. Flange Alignment & Bolts     | PASSED   | Gaskets replaced. Backing rings inspected.
+4. Shell Hydrotest (6.0 bar)    | PASSED   | Pressure held for 30 minutes with zero drop.
+5. Cathodic Protection Anode   | REPLACED | Zinc anodes consumed ~70%. Installed new.
+6. Local Temp/Pressure Gauges   | PASSED   | Calibrated and verified against DCS console.
+--------------------------------------------------------------------------------
+
+COMPLIANCE SUMMATION:
+The static vessel E-201 is certified for continued operations under normal operating conditions (Max Temp: 210C, Max Press: 5.5 bar). Next comprehensive hydrotesting and internal inspection scheduled for June 2029 (5-year cycle per PESO guidelines).
+
+--------------------------------------------------------------------------------
+Signature of Lead Inspector: J. Doe
+Verified By: P. Mehta (Plant Operations Manager)
+================================================================================

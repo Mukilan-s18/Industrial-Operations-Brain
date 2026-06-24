@@ -1,0 +1,31 @@
+================================================================================
+REFINERY OPERATIONS & MAINTENANCE MANUAL - ACTIVE VERSION (JANUARY 2024)
+SECTION 12: ROTATING EQUIPMENT STANDARD OPERATING PROCEDURES (SOP)
+DOCUMENT ID: SOP-P-101-REV4
+================================================================================
+
+TITLE: Maintenance and Operation Procedures for High-Pressure Hydrocarbon Transfer Pumps
+
+1. OBJECTIVE:
+This document outlines standard operating procedures for the maintenance, inspection, and casing bolt torque specifications for centrifugal pumps (P-101 A/B) in the LPG separation unit.
+
+2. APPLICABILITY:
+Applicable to all field technicians and maintenance operators in Zone 1.
+
+3. CASING BOLT SPECIFICATIONS & ASSEMBLY:
+Following structural analysis of pressure drops and gasket leakage events under high pressure, casing bolt torque requirements have been recalculated to prevent hydrocarbon leaks and maintain safety distances.
+
+CRITICAL TORQUE LIMITS:
+- Casing main tensioning bolts must be tightened in a cross-pattern sequence.
+- Target casing bolt tightening torque is: 80 Nm (+/- 5%).
+- Ensure all bolts are torqued in three progressive stages (30 Nm, 60 Nm, then final 80 Nm).
+
+WARNING: Under-tightening bolts below 75 Nm may cause flange leaks and gas release, violating OISD-118 Section 4.1 regulations.
+
+4. WORK PERMIT REQUIREMENT:
+All operations require a standard cold work permit. Hot work requires gas monitoring and a valid hot work permit signed by the area supervisor.
+
+--------------------------------------------------------------------------------
+Approved By: M. K. Narayanan (Operations Director, 2024)
+Effective Date: 10-January-2024 | Status: ACTIVE / ENFORCED
+--------------------------------------------------------------------------------
