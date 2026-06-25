@@ -127,3 +127,12 @@ ingestion/
 │   └── language.py      # Hindi-English detection
 └── models/schemas.py    # Pydantic output schemas
 ```
+
+---
+
+## Contributors
+
+- [Mukilan S (Mukilan-s18)](https://github.com/Mukilan-s18)
+- [Mukesh Kumar (MUKESHKUMAR-21)](https://github.com/MUKESHKUMAR-21)
+- [Deepesh M (melvindeepesh-boop)](https://github.com/melvindeepesh-boop)
+
