@@ -1,129 +1,103 @@
-# Industrial Operations Brain — Ingestion Service
+# RAG LLM Pipeline
 
-**Role: Multi-Format Ingestion Pipeline (Person 1)**
+A basic Retrieval-Augmented Generation (RAG) pipeline built with LlamaIndex, ChromaDB, and Google Gemini.
 
-Processes PDFs, scanned documents, spreadsheets, and work orders into clean structured JSON for RAG and knowledge graph consumption.
+## Overview
 
----
+This project loads a PDF document, splits it into chunks, embeds those chunks locally, stores them in a vector database, and lets you query the document using Gemini as the LLM.
 
-## 3-Command Startup
+**Pipeline:**
+1. Load a text-based PDF using LlamaIndex's PDF reader
+2. Chunk the text using `SentenceSplitter` (sentence-aware, fixed-size chunking)
+3. Embed chunks locally using `BAAI/bge-small-en-v1.5` (no API key required for embeddings)
+4. Store vectors in ChromaDB (persistent local storage)
+5. Query the indexed document using Gemini 2.5 Flash Lite
+
+## Tech Stack
+
+- [LlamaIndex](https://www.llamaindex.ai/) — orchestration framework
+- [ChromaDB](https://www.trychroma.com/) — local vector store
+- [Hugging Face Embeddings](https://huggingface.co/BAAI/bge-small-en-v1.5) — local embedding model
+- [Google Gemini](https://ai.google.dev/) — LLM for answering queries
+
+## Setup
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/Mukilan-s18/Industrial-Operations-Brain.git
+cd Industrial-Operations-Brain
+```
+
+### 2. Create a virtual environment
+```bash
+python -m venv venv
+venv\Scripts\activate      # Windows
+source venv/bin/activate   # macOS/Linux
+```
+
+### 3. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Add your API key
+Create a `.env` file in the project root:
+```
+GOOGLE_API_KEY=your_api_key_here
+```
+Get a key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+
+### 5. (Optional) Generate the demo PDF
+If `data/demo.pdf` isn't already included:
+```bash
+python create_demo_pdf.py
+```
+
+## Usage
 
 ```bash
-pip install -r ingestion/requirements.txt
-python setup.py
-uvicorn ingestion.main:app --reload
+python main.py setup     # Load PDF, chunk, embed, and store in ChromaDB
+python main.py query     # Run the default test query
+python main.py ask "Your question here"   # Ask a custom question
+python main.py chat      # Interactive Q&A mode
+python main.py both      # Run setup + a test query (default)
 ```
 
-Then open: **http://localhost:8000/docs**
+## Test Gemini API Key
 
----
-
-## What It Does
-
-| Input | Processor | Output |
-|---|---|---|
-| Text PDF | PyMuPDF | Text + tables per page |
-| Scanned PDF | Tesseract OCR | Text + confidence score |
-| Mixed PDF | Auto-detect | Both text + OCR |
-| Excel / XLSX | openpyxl + pandas | Tables per sheet |
-| Work order CSV | Custom parser | Normalized records |
-| P&ID drawing | OpenCV + Tesseract | Equipment tags |
-
----
-
-## API Endpoints
-
-### `POST /ingest/`
-Upload a file for ingestion.
-
-**Example (curl):**
+To verify your API key works and check which Gemini models are available to you:
 ```bash
-curl -X POST http://localhost:8000/ingest/ \
-  -F "file=@demo_docs/sop_pump_p101_rev4.pdf"
+python test_gemini.py
 ```
-
-**Response:**
-```json
-{
-  "doc_id": "sha256hash...",
-  "source": "sop_pump_p101_rev4.pdf",
-  "doc_type": "TEXT",
-  "pages": [...],
-  "metadata": {
-    "rev_number": "4",
-    "date": "15/01/2024",
-    "equipment_ids": ["P-101", "HV-204", "FCV-301"],
-    "language": "en",
-    "has_version_conflict": true,
-    "superseded_by": null
-  },
-  "total_pages": 2,
-  "processing_time_ms": 145.3,
-  "warnings": ["Version conflict: this document (Rev 4) supersedes existing doc..."]
-}
-```
-
-### `GET /health`
-Check all services are running.
-
----
-
-## Features
-
-- **Version conflict detection**: Upload SOP Rev 3 then Rev 4 — system flags Rev 3 as superseded
-- **Work order normalization**: Handles `EqpNum`, `AssetID`, etc. → standard `equipment_id`
-- **Equipment ID extraction**: Finds `P-101`, `HV-204`, `FCV-301` etc. from any text
-- **Deduplication**: SHA-256 hash check — same file won't be ingested twice
-- **Graceful degradation**: Bad PDFs, OCR timeouts, missing IDs — all handled with error flags, not crashes
-- **Hindi-English support**: Detects Devanagari characters, flags mixed-language docs
-
----
-
-## Demo Corpus
-
-Generate all 7 demo documents:
-```bash
-python demo_docs/generate_demo_docs.py
-```
-
-| File | Purpose |
-|---|---|
-| `sop_pump_p101_rev3.pdf` | Outdated SOP (50 Nm torque) — triggers version conflict |
-| `sop_pump_p101_rev4.pdf` | Current SOP (80 Nm torque) — supersedes Rev 3 |
-| `inspection_checklist_e201.pdf` | Equipment inspection checklist with table |
-| `oem_manual_fcv301_excerpt.pdf` | OEM manual with complex formatting |
-| `email_archive_p101_maintenance.pdf` | Maintenance email thread |
-| `work_orders_june2024.csv` | Work order history with mixed column names |
-| `monthly_inspection_june2024.xlsx` | Inspection sheet (Excel) |
-
----
-
-## If Demo Crashes
-
-```bash
-./restart.sh
-```
-
----
 
 ## Project Structure
 
 ```
-ingestion/
-├── main.py              # FastAPI entry point
-├── health.py            # /health endpoint
-├── routers/ingest.py    # /ingest/ endpoint
-├── processors/
-│   ├── pdf_processor.py
-│   ├── ocr_processor.py
-│   ├── table_processor.py
-│   ├── excel_processor.py
-│   ├── workorder_processor.py
-│   └── image_processor.py
-├── utils/
-│   ├── metadata.py      # Revision/date/equipment ID extraction
-│   ├── deduplication.py # SHA-256 dedup
-│   ├── validation.py    # MIME type checks
-│   └── language.py      # Hindi-English detection
-└── models/schemas.py    # Pydantic output schemas
+rag-llm-pipeline/
+├── main.py              # Core RAG pipeline (setup + query)
+├── create_demo_pdf.py   # Generates a sample PDF for testing
+├── test_gemini.py       # Standalone Gemini API connectivity test
+├── requirements.txt     # Python dependencies
+├── .env                 # API keys (not committed)
+├── .gitignore
+├── data/                # Source PDFs
+└── chroma_db/           # Persisted vector store (generated, not committed)
 ```
+
+## Configuration
+
+Key settings in `main.py`:
+
+| Setting | Value |
+|---|---|
+| Chunk size | 1024 tokens |
+| Chunk overlap | 200 tokens |
+| Embedding model | `BAAI/bge-small-en-v1.5` |
+| LLM | `gemini-2.5-flash-lite` |
+| Vector store | ChromaDB (persistent, local) |
+
+## Notes
+
+- Embeddings run locally — no API calls or cost for the embedding step.
+- The script includes retry-with-backoff logic for Gemini API rate limits (429 errors).
+- ChromaDB data persists in `./chroma_db` between runs; delete this folder to start fresh.
