@@ -4,14 +4,25 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pyvis.network import Network
+from pydantic import BaseModel
 from src.ner_pipeline import NERPipeline
 from src.graph_builder import KnowledgeGraphBuilder
+from src.rag_agent import RagAgent
 
 app = FastAPI(title="Industrial Copilot - Knowledge Graph API")
 
 # Initialize and build graph on startup
 ner = NERPipeline()
 builder = KnowledgeGraphBuilder()
+rag_agent = RagAgent(builder)
+
+class QueryRequest(BaseModel):
+    query: str
+    role: str
+
+@app.post("/query")
+def process_query(req: QueryRequest):
+    return rag_agent.query(req.query, req.role)
 
 # Load mock documents and build graph
 DOCS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "documents.json")
