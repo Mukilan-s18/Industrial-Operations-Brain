@@ -42,9 +42,22 @@ class TaskRecord:
 _tasks: Dict[str, TaskRecord] = {}
 _lock = threading.Lock()
 
+def _evict_old_tasks():
+    """Evict DONE or FAILED tasks older than 1 hour (3600 seconds)."""
+    now = time.time()
+    to_delete = []
+    with _lock:
+        for task_id, record in _tasks.items():
+            if record.status in (TaskStatus.DONE, TaskStatus.FAILED) and record.completed_at:
+                if now - record.completed_at > 3600:
+                    to_delete.append(task_id)
+        for task_id in to_delete:
+            del _tasks[task_id]
+
 
 def create_task(source: str) -> str:
     """Create a new async task and return its task_id."""
+    _evict_old_tasks()
     task_id = str(uuid.uuid4())
     record = TaskRecord(task_id=task_id, source=source)
     with _lock:
@@ -55,33 +68,28 @@ def create_task(source: str) -> str:
 
 def get_task(task_id: str) -> Optional[TaskRecord]:
     """Retrieve a task record by ID."""
+    _evict_old_tasks()
     with _lock:
         return _tasks.get(task_id)
 
 
-def run_ingestion_async(task_id: str, tmp_path: Path, filename: str, category: str):
+def run_ingestion_async(task_id: str, tmp_path: Path, filename: str, category: str, file_hash: str):
     """
     Run full ingestion in a background thread.
     Updates the TaskRecord in-place as processing proceeds.
     """
-    from ingestion.processors.excel_processor import extract_excel
-    from ingestion.processors.pdf_processor import extract_pdf
-    from ingestion.processors.workorder_processor import extract_work_orders
+    from ingestion.utils.pipeline import run_extraction_pipeline
     from ingestion.utils.deduplication import register_document
     from ingestion.utils.language import detect_language
     from ingestion.utils.metadata import (
         extract_date,
         extract_equipment_ids,
         extract_revision,
-        normalize_document_title,
     )
     from ingestion.models.schemas import (
-        DocType,
         DocumentMetadata,
         IngestionResult,
-        PageResult,
     )
-    import json
 
     record = get_task(task_id)
     if not record:
@@ -95,35 +103,17 @@ def run_ingestion_async(task_id: str, tmp_path: Path, filename: str, category: s
     warnings = []
 
     try:
-        if category == "pdf":
-            with _lock:
-                record.progress = "Extracting PDF text and tables..."
-            pages, doc_type = extract_pdf(tmp_path)
-        elif category == "excel":
-            with _lock:
-                record.progress = "Parsing Excel sheets..."
-            pages = extract_excel(tmp_path)
-            doc_type = DocType.TABLE_HEAVY
-        elif category == "csv":
-            with _lock:
-                record.progress = "Parsing work order CSV..."
-            records = extract_work_orders(tmp_path)
-            text = json.dumps(records, indent=2, default=str)
-            pages = [PageResult(page=1, text=text, is_ocr=False)]
-            doc_type = DocType.TABLE_HEAVY
-            if any(r["requires_manual_review"] for r in records):
-                warnings.append("Some records missing equipment_id — require manual review.")
-        else:
-            raise ValueError(f"Unsupported category: {category}")
+        with _lock:
+            record.progress = f"Extracting {category}..."
+        
+        pages, doc_type, pipe_warnings = run_extraction_pipeline(tmp_path, category)
+        warnings.extend(pipe_warnings)
 
         with _lock:
             record.progress = "Extracting metadata..."
 
         first_pages_text = " ".join(p.text for p in pages[:3])
         full_text = " ".join(p.text for p in pages)
-
-        from ingestion.utils.metadata import compute_file_hash
-        file_hash = compute_file_hash(tmp_path)
 
         metadata = DocumentMetadata(
             rev_number=extract_revision(first_pages_text),
