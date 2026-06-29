@@ -47,8 +47,12 @@ def get_stats():
     return builder.get_graph_stats()
 
 @app.get("/api/compliance-gaps")
-def get_compliance_gaps(date: str = "2025-09-01"):
+def get_compliance_gaps(date: str = None):
     return builder.get_compliance_gaps(date)
+
+@app.get("/api/ner-evaluation")
+def get_ner_evaluation():
+    return ner.evaluate_accuracy()
 
 @app.get("/api/failure-patterns")
 def get_failure_patterns():
