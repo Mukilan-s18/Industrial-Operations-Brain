@@ -1,0 +1,33 @@
+# Core API
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+python-dotenv==1.0.1
+
+# PDF processing
+PyMuPDF==1.24.3
+pdfplumber==0.11.1
+
+# OCR
+pytesseract==0.3.10
+Pillow==10.3.0
+
+# Table extraction
+camelot-py[cv]==0.11.0
+# 4.10 is compiled against NumPy 2.x (avoids _ARRAY_API conflict)
+opencv-python-headless==4.10.0.84
+
+# Spreadsheets / Work Orders
+openpyxl==3.1.2
+pandas==2.2.2
+xlrd==2.0.1
+
+# Language detection
+langdetect==1.0.9
+
+# Hashing / utilities
+python-magic==0.4.27
+
+# Testing
+pytest==8.2.0
+httpx==0.27.0
