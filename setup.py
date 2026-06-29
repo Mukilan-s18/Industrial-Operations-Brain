@@ -12,10 +12,13 @@ from pathlib import Path
 
 def check_python():
     version = sys.version_info
-    if version < (3, 10):
-        print(f"✗ Python 3.10+ required, got {version.major}.{version.minor}")
+    if version < (3, 9):
+        print(f"✗ Python 3.9+ required, got {version.major}.{version.minor}")
         sys.exit(1)
-    print(f"✓ Python {version.major}.{version.minor}.{version.micro}")
+    elif version < (3, 10):
+        print(f"⚠  Python {version.major}.{version.minor}.{version.micro} (3.10+ recommended, but 3.9 works)")
+    else:
+        print(f"✓ Python {version.major}.{version.minor}.{version.micro}")
 
 
 def check_tesseract():
