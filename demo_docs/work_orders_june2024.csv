@@ -1,0 +1,6 @@
+WorkOrderID,EqpNum,Date,JobType,PerformedTorque_Nm,Technician,Status,Notes
+WO-901,P-101,2024-06-05,Seal Replacement & Bolt Tightening,50,Suresh Kumar,Closed,Re-assembled casing. Tightened casing bolts to 50 Nm as per SOP standard. No visible leaks detected.
+WO-902,P-102,2024-06-12,Gasket Re-tightening,82,Ramesh Lal,Closed,Tightened bolts to 82 Nm. Alignment verified. Pressure tested.
+WO-903,E-201,2024-06-18,Tube Bundle Inspection,N/A,John Doe,Closed,Pulled tube bundle. Cleaned scales. Re-inserted. Gasket replaced.
+WO-904,P-101,2024-06-25,Routine Inspection,N/A,Suresh Kumar,Open,Audited vibration levels. Normal range. Check oil level.
+WO-905,V-201,2024-06-28,Safety Relief Valve Calibration,N/A,David P.,Closed,SRV calibrated at 15.5 kg/cm2. Tagged and sealed. Next due June 2025.

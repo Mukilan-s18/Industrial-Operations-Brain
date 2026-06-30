@@ -1,0 +1,24 @@
+================================================================================
+OIL INDUSTRY SAFETY DIRECTORATE (OISD) STANDARD - 118
+LAYOUTS FOR OIL AND GAS INSTALLATIONS (FIRST EDITION)
+================================================================================
+
+SECTION 4: ROTATING EQUIPMENT DESIGN LIMITS & INTEGRITY RULES
+4.1: Casing Bolts and Flange Gaskets
+- Casing bolts on rotating units handling liquefied petroleum gas (LPG) or light hydrocarbons under pressures exceeding 10 kg/cm2 must follow high-integrity tightening standards to prevent vapor releases.
+- Recommended casing bolt tightening torque specs must be documented in standard operating procedures (SOPs). For centrifugal pumps of capacity exceeding 50 m3/hr, the casing torque must be strictly adhered to and recorded post-maintenance.
+- Recommended standard torque for high pressure pump casing studs is:
+  - Minimum torque threshold: 75 Nm
+  - Target design value: 80 Nm
+  - Maximum torque threshold: 85 Nm
+- Under-tightening casing bolts (below 75 Nm) is flagged as a high-criticality regulatory breach of OISD safety standard due to pressure gasket release risks.
+
+SECTION 7: PLANT LAYOUT & SAFETY DISTANCES
+7.3: Minimum Safety Distances for Hydrocarbon Pumps
+- Centrifugal transfer pumps handling hazardous chemicals or hydrocarbons must maintain a minimum distance from storage tanks and other processing facilities to mitigate fire exposure risks.
+- The safety distance from high-pressure transfer pumps (e.g. LPG pumps) to the boundary of storage tank dykes must be at least 15 meters.
+
+================================================================================
+(c) Oil Industry Safety Directorate (OISD), Government of India.
+For internal regulatory compliance audits only.
+================================================================================

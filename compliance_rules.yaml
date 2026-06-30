@@ -1,0 +1,36 @@
+# OISD & Safety Compliance Rules - Industrial Operations Brain
+rules:
+  - id: OISD-118-SEC-4.1
+    title: Pump Torque Limits
+    description: Recommended tightening torque for pump casing bolts on high-pressure fluid transfer pumps (like P-101).
+    standard_value: 80
+    unit: Nm
+    tolerance_pct: 5
+    criticality: HIGH
+    applicable_assets:
+      - P-101
+      - P-102
+
+  - id: OISD-118-SEC-5.2
+    title: Hot Work Permit Requirements
+    description: Any maintenance activity involving sparks (e.g., welding) in process areas (Zone 1/2) requires a double-authorized Hot Work Permit.
+    required_role: Engineer
+    enforced: true
+    criticality: CRITICAL
+
+  - id: OISD-118-SEC-7.3
+    title: Equipment Layout Safety Distances
+    description: Minimum clear distance between high-pressure transfer pumps and hydrocarbon storage tanks.
+    min_distance_m: 15
+    criticality: HIGH
+    applicable_assets:
+      - P-101
+      - T-302
+
+  - id: PESO-LPG-REG-12
+    title: LPG Vessel Inspection Cycle
+    description: Safety relief valves (SRVs) on LPG storage vessels (like V-201) must be calibrated and inspected.
+    frequency_months: 12
+    criticality: CRITICAL
+    applicable_assets:
+      - V-201
