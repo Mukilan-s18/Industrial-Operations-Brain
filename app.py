@@ -85,8 +85,17 @@ def compute_corpus_coverage() -> float:
                 pass
 
         # Coverage: if we have chunks from all known docs, coverage is high
-        # We know we have 4 source files total
-        expected_docs = 4  # sop_101.txt, sop_101_b.txt, wo_998.txt, osha_1910_147.txt
+        import json
+        expected_docs = 4  # fallback
+        docs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "documents.json"))
+        if os.path.exists(docs_path):
+            try:
+                with open(docs_path, "r") as f:
+                    docs_list = json.load(f)
+                expected_docs = len(docs_list)
+            except Exception:
+                pass
+                
         if expected_docs == 0:
             return 0.0
         return round((total_docs / expected_docs) * 100, 1)
