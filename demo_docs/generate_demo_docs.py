@@ -9,6 +9,7 @@ from pathlib import Path
 OUTPUT_DIR = Path(__file__).parent
 
 # ── Requires PyMuPDF ──────────────────────────────────────────────────────────
+# pyrefly: ignore [missing-import]
 import fitz
 
 

@@ -5,6 +5,8 @@ import yaml
 import os
 import datetime
 import time
+import requests
+import sqlite3
 
 # Set page configuration
 st.set_page_config(
@@ -201,7 +203,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Main Navigation Tabs
-tab_chat, tab_compliance, tab_audit = st.tabs(["Interactive Brain Query", "Audits & Compliance", "Admin Logs"])
+tab_chat, tab_compliance, tab_audit, tab_graph = st.tabs(["Interactive Brain Query", "Audits & Compliance", "Admin Logs", "Knowledge Graph"])
 
 # Tab 1: Interactive Brain Query
 with tab_chat:
@@ -399,41 +401,31 @@ with tab_compliance:
     else:
         st.markdown("<div class='clean-card'><h3>Regulatory Compliance Dashboard</h3><p style='font-size: 0.95em; color: #4b5563;'>This matrix maps equipment operations and maintenance history against statutory Indian standards (OISD, PESO).</p></div>", unsafe_allow_html=True)
         
-        # Mock Compliance Matrix Data
-        compliance_matrix = pd.DataFrame([
-            {
-                "Equipment ID": "P-101",
-                "Equipment Description": "LPG Feed Transfer Pump",
-                "Standard": "OISD-118 Section 4.1",
-                "Last Audit Date": "2024-06-05",
-                "Assigned Status": "CRITICAL GAP",
-                "Details": "Tightened to 50 Nm. SOP Rev 4 requires 80 Nm (+/- 5%). Below 75 Nm safety lower limit."
-            },
-            {
-                "Equipment ID": "P-102",
-                "Equipment Description": "LPG Feed Booster Pump",
-                "Standard": "OISD-118 Section 4.1",
-                "Last Audit Date": "2024-06-12",
-                "Assigned Status": "COMPLIANT",
-                "Details": "Tightened to 82 Nm. Meets standard spec target of 80 Nm."
-            },
-            {
-                "Equipment ID": "E-201",
-                "Equipment Description": "Separation Overhead Condenser",
-                "Standard": "PESO-LPG-REG-12",
-                "Last Audit Date": "2024-06-18",
-                "Assigned Status": "COMPLIANT",
-                "Details": "Annual check complete. Shell hydrotested. Next inspection due June 2029."
-            },
-            {
-                "Equipment ID": "V-201",
-                "Equipment Description": "LPG Surge Vessel",
-                "Standard": "PESO-LPG-REG-12",
-                "Last Audit Date": "2024-06-28",
-                "Assigned Status": "COMPLIANT",
-                "Details": "SRV calibrated and tagged. Next calibration due June 2025."
-            }
-        ])
+        # Fetch Compliance Matrix Data from Backend API
+        try:
+            response = requests.get(f"http://127.0.0.1:8000/api/compliance-gaps?role={st.session_state.role}")
+            if response.status_code == 200:
+                gaps = response.json()
+                if gaps:
+                    formatted_data = []
+                    for gap in gaps:
+                        formatted_data.append({
+                            "Equipment ID": gap.get("equipment_id", ""),
+                            "Equipment Description": gap.get("equipment_type", ""),
+                            "Standard": gap.get("regulation_id", ""),
+                            "Last Audit Date": gap.get("last_inspection", ""),
+                            "Assigned Status": "CRITICAL GAP",
+                            "Details": gap.get("reason", "")
+                        })
+                    compliance_matrix = pd.DataFrame(formatted_data)
+                else:
+                    compliance_matrix = pd.DataFrame([{"Assigned Status": "COMPLIANT", "Details": "No compliance gaps found in the knowledge graph."}])
+            else:
+                st.error("Failed to fetch compliance data from backend API.")
+                compliance_matrix = pd.DataFrame([{"Assigned Status": "UNKNOWN", "Details": "API Error"}])
+        except requests.exceptions.ConnectionError:
+            st.error("Backend API is unreachable. Please ensure FastAPI is running on port 8000.")
+            compliance_matrix = pd.DataFrame([{"Assigned Status": "UNKNOWN", "Details": "Connection Error"}])
         
         # Format styling for Streamlit
         def style_status(val):
@@ -505,14 +497,20 @@ with tab_audit:
     st.subheader("User Feedback Logging")
     st.write("Capture user feedback to retrain vector embeddings and refine graph relations.")
     
-    feedback_file = "feedback.csv"
-    if os.path.exists(feedback_file):
-        try:
-            fb_df = pd.read_csv(feedback_file)
+    # Initialize SQLite database for feedback
+    conn = sqlite3.connect("feedback.db")
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS feedback
+                 (Timestamp TEXT, Persona TEXT, Query TEXT, Feedback INTEGER)''')
+    conn.commit()
+
+    try:
+        fb_df = pd.read_sql_query("SELECT * FROM feedback", conn)
+        if not fb_df.empty:
             st.dataframe(fb_df, use_container_width=True)
-        except Exception:
+        else:
             st.info("No feedback registered yet.")
-    else:
+    except Exception:
         st.info("No feedback registered yet.")
 
     # Feedback simulation
@@ -526,21 +524,32 @@ with tab_audit:
         st.write(" ")
         if st.button("Log Feedback"):
             if fb_query:
-                # Append to CSV
-                fb_row = pd.DataFrame([{
-                    "Timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "Persona": st.session_state.role,
-                    "Query": fb_query,
-                    "Feedback": 1 if "+1" in rating else -1
-                }])
-                
-                if not os.path.exists(feedback_file):
-                    fb_row.to_csv(feedback_file, index=False)
-                else:
-                    fb_row.to_csv(feedback_file, mode='a', header=False, index=False)
+                # Thread-safe SQLite insert
+                with sqlite3.connect("feedback.db", timeout=10) as insert_conn:
+                    insert_c = insert_conn.cursor()
+                    insert_c.execute("INSERT INTO feedback VALUES (?, ?, ?, ?)", 
+                                     (datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 
+                                      st.session_state.role, 
+                                      fb_query, 
+                                      1 if "+1" in rating else -1))
+                    insert_conn.commit()
                     
                 st.toast("Feedback registered.")
                 time.sleep(1.0)
                 st.rerun()
             else:
                 st.error("Please enter a query to rate.")
+                
+    conn.close()
+
+# Tab 4: Knowledge Graph Visualization
+with tab_graph:
+    st.markdown("<div class='clean-card'><h3>Live Plant Knowledge Graph</h3><p style='font-size:0.9em; color:#4b5563;'>Explore the entity relationships extracted from operations manuals, work orders, and regulations.</p></div>", unsafe_allow_html=True)
+    try:
+        html_resp = requests.get(f"http://127.0.0.1:8000/api/graph-viz?role={st.session_state.role}")
+        if html_resp.status_code == 200:
+            components.html(html_resp.text, height=550)
+        else:
+            st.error(f"Failed to load Knowledge Graph. Status Code: {html_resp.status_code}")
+    except requests.exceptions.ConnectionError:
+        st.error("Backend API is unreachable. Please ensure FastAPI is running on port 8000.")
