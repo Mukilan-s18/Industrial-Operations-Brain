@@ -1,0 +1,6 @@
+REGULATION: OSHA Standard 1910.147
+Subject: The control of hazardous energy (lockout/tagout)
+
+This standard covers the servicing and maintenance of machines and equipment in which the unexpected energization or start up of the machines or equipment, or release of stored energy, could harm employees.
+
+Employers must establish a program consisting of energy control procedures, employee training and periodic inspections to ensure that before any employee performs any servicing or maintenance on a machine or equipment where the unexpected energizing, startup or release of stored energy could occur and cause injury, the machine or equipment shall be isolated from the energy source and rendered inoperative.
