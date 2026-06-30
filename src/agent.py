@@ -7,7 +7,7 @@ import os
 import time
 from typing import TypedDict
 from langgraph.graph import StateGraph, END
-from llama_index.llms.google_genai import GoogleGenAI
+from llama_index.llms.gemini import Gemini
 from llama_index.core import QueryBundle
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from dotenv import load_dotenv
@@ -20,8 +20,12 @@ from src.llm_utils import RateLimitedLLM
 
 
 # Define State
+from typing import Any
+
 class RCAState(TypedDict):
     query: str
+    graph_builder: Any
+    user_role: str
     original_query: str
     work_orders_context: list
     sops_context: list
@@ -48,14 +52,16 @@ def get_embed_model():
 
 
 def get_llm():
-    return GoogleGenAI(model="gemini-3.5-flash", api_key=os.getenv("GOOGLE_API_KEY"))
+    return Gemini(model="models/gemini-2.5-flash-lite", api_key=os.getenv("GOOGLE_API_KEY"))
 
 
-def get_retriever(collections: list[str]):
+def get_retriever(collections: list[str], builder: Any, role: str):
     return HybridGraphRetriever(
         chroma_db_path=_chroma_path,
         collection_names=collections,
-        embed_model=get_embed_model()
+        embed_model=get_embed_model(),
+        builder=builder,
+        role=role
     )
 
 
