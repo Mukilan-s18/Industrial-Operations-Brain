@@ -6,7 +6,7 @@ import asyncio
 import json
 import os
 import chromadb
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -75,11 +75,31 @@ class QueryRequest(BaseModel):
     mode: str = "detailed"  # Day 7: brief vs detailed
 
 
+# =====================================================================
+# RBAC: Role-based access control enforced at backend
+# Roles: operator, engineer, auditor
+# Restricted keywords only accessible to engineer/auditor roles
+# =====================================================================
+OPERATOR_RESTRICTED_TERMS = [
+    "e-201", "electrical log", "engineer log", "moc", "management of change",
+    "compliance report", "audit log", "rbac", "access control"
+]
+
+def check_role_access(role: str, query: str) -> tuple[bool, str]:
+    """Returns (allowed, reason). Operators cannot access engineer/auditor queries."""
+    if role.lower() == "operator":
+        q_lower = query.lower()
+        for term in OPERATOR_RESTRICTED_TERMS:
+            if term in q_lower:
+                return False, f"Access denied: '{term}' is restricted to Engineer/Auditor roles."
+    return True, ""
+
+
 rca_graph = build_rca_graph()
 
 
 @app.post("/chat")
-async def chat_endpoint(req: QueryRequest):
+async def chat_endpoint(req: QueryRequest, x_user_role: str = Header(default="operator")):
     """
     Standard endpoint with:
     - Day 8: Dynamic caching (populated from real runs)
@@ -88,6 +108,11 @@ async def chat_endpoint(req: QueryRequest):
     """
     start_time = time.time()
     query_lower = req.query.lower().strip()
+
+    # RBAC enforcement at backend
+    allowed, reason = check_role_access(x_user_role, req.query)
+    if not allowed:
+        raise HTTPException(status_code=403, detail=reason)
 
     # Day 10: Fallback mode (for live demo crashes)
     if USE_FALLBACK:
@@ -153,8 +178,12 @@ async def toggle_fallback(enabled: bool):
     return {"fallback_mode": USE_FALLBACK}
 
 @app.post("/stream")
-async def stream_rca(req: QueryRequest):
-    """Streaming endpoint for reasoning chain (Day 5, 8)"""
+async def stream_rca(req: QueryRequest, x_user_role: str = Header(default="operator")):
+    """Streaming endpoint for reasoning chain (Day 5, 8) with RBAC enforcement."""
+    allowed, reason = check_role_access(x_user_role, req.query)
+    if not allowed:
+        raise HTTPException(status_code=403, detail=reason)
+    
     async def event_generator():
         start_time = time.time()
         inputs = {"original_query": req.query, "query": ""}

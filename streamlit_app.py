@@ -348,9 +348,16 @@ with tab_chat:
                 else:
                     os.environ["USE_FALLBACK"] = "false"
                     
-                res = requests.post("http://127.0.0.1:8000/chat", json={"query": query})
+                res = requests.post(
+                    "http://127.0.0.1:8000/chat",
+                    json={"query": query},
+                    headers={"X-User-Role": st.session_state.role.split("(")[-1].rstrip(")").strip().lower()}
+                )
                 
-                if res.status_code == 200:
+                if res.status_code == 403:
+                    response_text = f"**Access Denied**: {res.json().get('detail', 'You do not have permission to view this content.')}"
+                    status = "ACCESS DENIED"
+                elif res.status_code == 200:
                     data = res.json()
                     response_text = data.get("answer", "")
                     
