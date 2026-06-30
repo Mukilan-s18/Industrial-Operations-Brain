@@ -7,7 +7,7 @@ import datetime
 import time
 import requests
 import sqlite3
-from src.app import builder, ner, get_graph_viz
+from backend.app import builder, ner, get_graph_viz
 
 # Set page configuration
 st.set_page_config(
