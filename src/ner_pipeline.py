@@ -1,4 +1,6 @@
+import os
 import re
+import yaml
 import spacy
 from spacy.pipeline import EntityRuler
 from rapidfuzz import fuzz
@@ -6,60 +8,28 @@ from typing import List, Dict, Any, Tuple
 from src.schema import ExtractedEntity
 
 class NERPipeline:
-    def __init__(self, spacy_model: str = "en_core_web_sm"):
+    def __init__(self, spacy_model: str = "en_core_web_sm", config_path: str = None):
         self.nlp = spacy.load(spacy_model)
         
+        # Load config dynamically
+        if config_path is None:
+            config_path = os.path.join(os.path.dirname(__file__), "..", "graph_config.yaml")
+            
+        self.config = {}
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                self.config = yaml.safe_load(f) or {}
+                
         # Configure EntityRuler for custom industrial NER
         ruler = self.nlp.add_pipe("entity_ruler", before="ner")
         
-        # Define industrial regex and phrase patterns
-        patterns = [
-            # Equipment Patterns
-            {"label": "EQUIPMENT", "pattern": [{"TEXT": {"REGEX": "^[A-Z]{1,3}-\\d{3,4}$"}}]}, # P-101, C-201
-            {"label": "EQUIPMENT", "pattern": [{"LOWER": "pump"}, {"TEXT": {"REGEX": "^P-?\\d{3,4}$"}}]}, # Pump P-101, Pump P101
-            {"label": "EQUIPMENT", "pattern": [{"LOWER": "compressor"}, {"TEXT": {"REGEX": "^C-?\\d{3,4}$"}}]}, # Compressor C-201
-            
-            # Regulation Patterns
-            {"label": "REGULATION", "pattern": [{"TEXT": {"REGEX": "^OISD-\\d{3}$"}}]}, # OISD-118
-            {"label": "REGULATION", "pattern": [{"LOWER": "peso"}]}, # PESO
-            {"label": "REGULATION", "pattern": [{"LOWER": "factory"}, {"LOWER": "act"}, {"TEXT": {"REGEX": "^\\d{4}$"}, "OP": "?"}]}, # Factory Act 1948
-            
-            # Failure Mode Patterns
-            {"label": "FAILURE_MODE", "pattern": [{"LOWER": "seal"}, {"LOWER": "leak"}]},
-            {"label": "FAILURE_MODE", "pattern": [{"LOWER": "bearing"}, {"LOWER": "seizure"}]},
-            {"label": "FAILURE_MODE", "pattern": [{"LOWER": "dry"}, {"LOWER": "run"}]},
-            {"label": "FAILURE_MODE", "pattern": [{"LOWER": "mechanical"}, {"LOWER": "seal"}, {"LOWER": "degradation"}]},
-            {"label": "FAILURE_MODE", "pattern": [{"LOWER": "catastrophic"}, {"LOWER": "failure"}]},
-            
-            # Parameter Patterns
-            {"label": "PARAMETER", "pattern": [{"LOWER": "discharge"}, {"LOWER": "pressure"}]},
-            {"label": "PARAMETER", "pattern": [{"LOWER": "bearing"}, {"LOWER": "temperature"}]},
-            {"label": "PARAMETER", "pattern": [{"LOWER": "vibration"}, {"LOWER": "level"}]},
-            
-            # Specific values
-            {"label": "PARAMETER_VALUE", "pattern": [{"TEXT": {"REGEX": "^\\d+(\\.\\d+)?$"}}, {"LOWER": {"IN": ["bar", "c", "v", "psi"]}}]}, # 4.5 bar, 82 C
-        ]
-        
+        # Define industrial regex and phrase patterns from config
+        patterns = self.config.get("spacy_patterns", [])
         ruler.add_patterns(patterns)
         
-        # Manual override blocklist for alias resolver: {entity_a: [list_of_entities_that_are_NOT_equal]}
-        self.blocklist = {
-            "P-101": ["P-102", "Pump P-102", "P102"],
-            "P-102": ["P-101", "Pump P-101", "P101"],
-        }
-        
-        # Pre-known standard mappings (manual dictionary overrides)
-        self.manual_mappings = {
-            "Pump P-101": "P-101",
-            "Pump P101": "P-101",
-            "P101": "P-101",
-            "Pump P-102": "P-102",
-            "Pump P102": "P-102",
-            "P102": "P-102",
-            "Compressor C-201": "C-201",
-            "C201": "C-201",
-            "OISD 118": "OISD-118",
-        }
+        # Manual overrides and blocklist from config
+        self.blocklist = self.config.get("blocklist", {})
+        self.manual_mappings = self.config.get("manual_mappings", {})
         
         # Track established entities in this run to perform alias matching
         self.resolved_cache = {} # text -> resolved_id
@@ -204,3 +174,74 @@ class NERPipeline:
                 closest_param.properties["value"] = val_text
                 
         return extracted
+
+    def evaluate_accuracy(self, labeled_sentences_path: str = None) -> Dict[str, Any]:
+        """
+        Loads the labeled sentences, extracts entities, and calculates precision,
+        recall, and F1 score.
+        """
+        import json
+        if labeled_sentences_path is None:
+            labeled_sentences_path = os.path.join(os.path.dirname(__file__), "..", "data", "labeled_sentences.json")
+            
+        if not os.path.exists(labeled_sentences_path):
+            return {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1_score": 0.0,
+                "true_positives": 0,
+                "false_positives": 0,
+                "false_negatives": 0,
+                "details": []
+            }
+            
+        with open(labeled_sentences_path, "r") as f:
+            labeled_data = json.load(f)
+            
+        tps = 0
+        fps = 0
+        fns = 0
+        details = []
+        
+        for item in labeled_data:
+            sentence = item["sentence"]
+            gt_ents = item["entities"] # list of dict: {"text": "...", "label": "..."}
+            
+            # Reset cache for evaluation to ensure pure sentence-level resolution
+            self.resolved_cache = {}
+            
+            extracted = self.extract_entities(sentence)
+            
+            gt_set = set((gt["text"], gt["label"]) for gt in gt_ents)
+            ext_set = set((ent.id, ent.label) for ent in extracted)
+            
+            tp_set = gt_set.intersection(ext_set)
+            fp_set = ext_set - gt_set
+            fn_set = gt_set - ext_set
+            
+            tps += len(tp_set)
+            fps += len(fp_set)
+            fns += len(fn_set)
+            
+            details.append({
+                "sentence": sentence,
+                "ground_truth": [{"text": t, "label": l} for t, l in gt_set],
+                "extracted": [{"text": t, "label": l} for t, l in ext_set],
+                "true_positives": [{"text": t, "label": l} for t, l in tp_set],
+                "false_positives": [{"text": t, "label": l} for t, l in fp_set],
+                "false_negatives": [{"text": t, "label": l} for t, l in fn_set]
+            })
+            
+        precision = tps / (tps + fps) if (tps + fps) > 0 else 0.0
+        recall = tps / (tps + fns) if (tps + fns) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        
+        return {
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1_score": round(f1, 4),
+            "true_positives": tps,
+            "false_positives": fps,
+            "false_negatives": fns,
+            "details": details
+        }

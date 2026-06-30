@@ -36,8 +36,9 @@ graph TD
 
 ## 2. Knowledge Graph Schema
 
-Below is the entity-relationship ontology of node classes and edge relations:
+Below is the class ontology and the entity-relationship diagram of node classes and edge relations:
 
+### Class Ontology
 ```mermaid
 classDiagram
     class Document {
@@ -79,6 +80,18 @@ classDiagram
     Equipment --> Regulation : GOVERNED_BY
     Equipment --> Parameter : HAS_PARAMETER
     Equipment --> Date : HAS_INSPECTION
+```
+
+### Entity-Relationship Diagram
+```mermaid
+erDiagram
+    DOCUMENT ||--o{ PERSON : AUTHORED_BY
+    DOCUMENT ||--o{ EQUIPMENT : MENTIONS
+    DOCUMENT ||--o{ REGULATION : MENTIONS
+    EQUIPMENT ||--o{ FAILURE_MODE : HAS_FAILURE
+    EQUIPMENT ||--o{ REGULATION : GOVERNED_BY
+    EQUIPMENT ||--o{ PARAMETER : HAS_PARAMETER
+    EQUIPMENT ||--o{ DATE : HAS_INSPECTION
 ```
 
 ---
