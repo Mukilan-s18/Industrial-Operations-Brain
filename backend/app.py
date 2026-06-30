@@ -11,14 +11,14 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from src.agent import build_rca_graph
-from fallback import get_fallback
+from backend.src.agent import build_rca_graph
+from backend.src.fallback import get_fallback
 
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pyvis.network import Network
-from src.ner_pipeline import NERPipeline
-from src.graph_builder import KnowledgeGraphBuilder
+from backend.src.ner_pipeline import NERPipeline
+from backend.src.graph_builder import KnowledgeGraphBuilder
 
 
 load_dotenv()
@@ -30,7 +30,7 @@ app = FastAPI(title="Industrial RAG API")
 ner = NERPipeline()
 builder = KnowledgeGraphBuilder()
 
-DOCS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "documents.json"))
+DOCS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "documents.json"))
 if os.path.exists(DOCS_PATH):
     with open(DOCS_PATH, "r") as f:
         docs = json.load(f)
@@ -55,7 +55,7 @@ RESPONSE_CACHE: dict[str, dict] = {}
 USE_FALLBACK = os.getenv("USE_FALLBACK", "false").lower() == "true"
 
 # Day 9: Corpus Coverage — computed from ChromaDB at startup
-CHROMA_DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "chroma_db"))
+CHROMA_DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "chroma_db"))
 
 
 def compute_corpus_coverage() -> float:
@@ -87,7 +87,7 @@ def compute_corpus_coverage() -> float:
         # Coverage: if we have chunks from all known docs, coverage is high
         import json
         expected_docs = 4  # fallback
-        docs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "data", "documents.json"))
+        docs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "documents.json"))
         if os.path.exists(docs_path):
             try:
                 with open(docs_path, "r") as f:

@@ -117,7 +117,7 @@ if 'offline_queue' not in st.session_state:
 
 # Load compliance rules helper
 def load_compliance_rules():
-    yaml_path = os.path.join(os.path.dirname(__file__), "compliance_rules.yaml")
+    yaml_path = os.path.join(os.path.dirname(__file__), "..", "backend", "config", "compliance_rules.yaml")
     if os.path.exists(yaml_path):
         try:
             with open(yaml_path, 'r') as file:

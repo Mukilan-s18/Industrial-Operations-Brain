@@ -14,9 +14,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.retriever import HybridGraphRetriever
-from src.generator import generate_answer, GenerationResult
-from src.llm_utils import RateLimitedLLM
+from backend.src.retriever import HybridGraphRetriever
+from backend.src.generator import generate_answer, GenerationResult
+from backend.src.llm_utils import RateLimitedLLM
 
 
 # Define State

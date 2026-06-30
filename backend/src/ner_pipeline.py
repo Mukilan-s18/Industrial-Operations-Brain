@@ -5,7 +5,7 @@ import spacy
 from spacy.pipeline import EntityRuler
 from rapidfuzz import fuzz
 from typing import List, Dict, Any, Tuple
-from src.schema import ExtractedEntity
+from backend.src.schema import ExtractedEntity
 
 class NERPipeline:
     def __init__(self, spacy_model: str = "en_core_web_sm", config_path: str = None):
