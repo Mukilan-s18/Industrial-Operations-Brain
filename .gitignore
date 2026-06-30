@@ -9,3 +9,5 @@ __pycache__/
 demo_docs/*.pdf
 demo_docs/*.xlsx
 demo_docs/*.csv
+.venv/
+static/temp_graph_*.html

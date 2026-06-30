@@ -1,0 +1,37 @@
+[
+  {
+    "doc_id": "DOC-001",
+    "title": "Maintenance Log - Pump P-101 Seal Failure",
+    "author": "Rajesh Kumar",
+    "date": "2025-05-10",
+    "content": "Technician Rajesh Kumar performed unscheduled maintenance on Pump P-101. The unit experienced a severe seal leak causing a discharge pressure drop below 4.5 bar. Upon inspection, the primary mechanical seal was found to be completely degraded. This is the third seal leak failure logged for P-101 this year. We replaced the mechanical seal and verified that the discharge pressure recovered to 5.2 bar. Ref: OEM Manual Section 3.2 for seal replacement guidelines."
+  },
+  {
+    "doc_id": "DOC-002",
+    "title": "Annual OISD-118 Compliance Audit Report",
+    "author": "Sanjay Mehta (Safety Lead)",
+    "date": "2025-06-01",
+    "content": "Safety audit conducted to verify compliance with OISD-118 regulations at Utility Block B. Pump P-101 was inspected on 2025-06-01 and met all requirements. However, Pump P-102 was found with an outdated inspection record (last inspection: 2024-03-15). Under OISD-118, all pumps handling hydrocarbons must undergo inspections at least every 365 days. Pump P-102 currently has a compliance gap. Also, Compressor C-201, governed by PESO guidelines, is pending inspection. Its last recorded inspection was on 2024-02-10, meaning it also has an active compliance gap."
+  },
+  {
+    "doc_id": "DOC-003",
+    "title": "OEM Manual: Centrifugal Pumps P-100 Series",
+    "author": "Bharat Pumps Ltd",
+    "date": "2020-01-15",
+    "content": "Instruction manual for P-100 series centrifugal pumps (models including P-101 and P-102). Section 3.2: Mechanical Seal Maintenance. Preventative maintenance dictates that for high-vibration applications, the mechanical seal must be inspected quarterly. Seal leak events are typically caused by running dry or excessive bearing temperature. If a seal leak occurs, verify the bearing temperature is below 75 C. Section 3.2 recommends annual replacement of mechanical seals to prevent catastrophic failures."
+  },
+  {
+    "doc_id": "DOC-004",
+    "title": "Incident Log - Pump P-101 Multiple Seal Failures",
+    "author": "Amit Sharma",
+    "date": "2025-07-15",
+    "content": "Operator Amit Sharma reported an active seal leak on Pump P-101 at 14:30. This was accompanied by a high bearing temperature reading of 82 C, exceeding the 75 C threshold. The pump was immediately tripped. This is another seal leak incident for P-101, which is showing a high failure frequency. On 2025-08-20, during startup, a minor seal leak was again observed. We need a detailed RCA since P-101 has now suffered four seal failures within 12 months."
+  },
+  {
+    "doc_id": "DOC-005",
+    "title": "PESO Regulation Compliance Check - Compressor C-201",
+    "author": "Hitesh Patel",
+    "date": "2025-08-25",
+    "content": "Compressor C-201 is governed by PESO regulations due to high-pressure flammable gas handling. A compliance check was executed. The last inspection occurred on 2024-02-10, which exceeds the mandatory 365-day interval required under PESO. A compliance gap is logged. Additionally, the bearing temperature is showing elevated readings of 78 C, which needs to be monitored alongside the vibration level."
+  }
+]

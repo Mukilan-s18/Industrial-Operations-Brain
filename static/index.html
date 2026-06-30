@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Industrial plant compliance monitoring and asset failure risk analysis powered by networkx knowledge graphs and custom spaCy entity models.">
+  <title>Industrial Copilot - Knowledge Graph Control Room</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">KG</div>
+      <div class="brand-title">
+        <h1>Plant Knowledge Graph</h1>
+        <p>Industrial Copilot Engine &amp; Entity Resolution Backbone</p>
+      </div>
+    </div>
+    
+    <div class="header-meta">
+      <div class="meta-badge" id="last-sync-badge">
+        <span class="dot"></span>
+        <span>Graph Engine Online</span>
+      </div>
+      <div class="meta-badge">
+        <span>Current Date: 2025-09-01</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Stats Row -->
+    <section class="stats-grid" aria-label="Quick Stats Dashboard">
+      <div class="card primary-border">
+        <div class="card-header-stats">
+          <span>Total Entities</span>
+          <span>Nodes</span>
+        </div>
+        <div class="card-value" id="stats-nodes">-</div>
+        <div class="card-desc">Unique resolved entities in knowledge base</div>
+      </div>
+      
+      <div class="card secondary-border">
+        <div class="card-header-stats">
+          <span>Total Relations</span>
+          <span>Edges</span>
+        </div>
+        <div class="card-value" id="stats-edges">-</div>
+        <div class="card-desc">Weighted relationship links in context</div>
+      </div>
+      
+      <div class="card danger-border">
+        <div class="card-header-stats">
+          <span>Active Gaps</span>
+          <span>Compliance Risk</span>
+        </div>
+        <div class="card-value" id="stats-gaps">-</div>
+        <div class="card-desc">Equipment lacking inspection history</div>
+      </div>
+      
+      <div class="card success-border">
+        <div class="card-header-stats">
+          <span>Graph Density</span>
+          <span>Knowledge Coverage</span>
+        </div>
+        <div class="card-value" id="stats-coverage">-</div>
+        <div class="card-desc">Percentage of governed assets mapped</div>
+      </div>
+    </section>
+
+    <!-- Main Workspace -->
+    <div class="dashboard-grid">
+      <!-- Left Column: Graph Visualizer -->
+      <section class="card graph-container" aria-label="Interactive Graph Visualizer">
+        <div class="graph-header">
+          <div class="graph-controls">
+            <div class="search-input-wrapper">
+              <select id="node-selector">
+                <option value="">-- Focus Graph on Specific Entity (Ego Network) --</option>
+              </select>
+            </div>
+            <button class="btn" id="reset-graph-btn">Reset View</button>
+          </div>
+        </div>
+        
+        <div class="graph-canvas">
+          <iframe id="graph-iframe" src="/api/graph-viz" title="Interactive plant relationship graph visualizer"></iframe>
+        </div>
+        <div id="ego-indicator" style="display: none;">
+          <div class="ego-badge">
+            <span>Focused on: <strong id="ego-node-name">P-101</strong></span>
+            <button id="clear-ego-btn">&times;</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Insights & Analysis Panels -->
+      <section class="card insights-container" aria-label="Insights and Query Console">
+        <div class="tabs-header" role="tablist">
+          <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="pane-compliance" id="tab-compliance">Compliance Gaps</button>
+          <button class="tab-btn" role="tab" aria-selected="false" aria-controls="pane-failures" id="tab-failures">Failure Analysis</button>
+          <button class="tab-btn" role="tab" aria-selected="false" aria-controls="pane-ontology" id="tab-ontology">Ontology Legend</button>
+        </div>
+
+        <div class="tab-content">
+          <!-- Compliance Pane -->
+          <div class="tab-pane active" id="pane-compliance" role="tabpanel" aria-labelledby="tab-compliance">
+            <div id="compliance-list">
+              <!-- Dynamically populated compliance gap items -->
+              <p style="color: var(--text-muted);">Loading compliance records...</p>
+            </div>
+          </div>
+
+          <!-- Failures Pane -->
+          <div class="tab-pane" id="pane-failures" role="tabpanel" aria-labelledby="tab-failures">
+            <div id="failures-list">
+              <!-- Dynamically populated failure risk items -->
+              <p style="color: var(--text-muted);">Loading failure risk assessments...</p>
+            </div>
+          </div>
+
+          <!-- Ontology Legend Pane -->
+          <div class="tab-pane" id="pane-ontology" role="tabpanel" aria-labelledby="tab-ontology">
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: var(--primary);">Entity Classes</h3>
+            <div class="legend-grid" style="margin-bottom: 1.5rem;">
+              <div class="legend-item"><span class="legend-color" style="color: #3b82f6;"></span> EQUIPMENT (Pump, Compressor)</div>
+              <div class="legend-item"><span class="legend-color" style="color: #ef4444;"></span> REGULATION (OISD, PESO, Acts)</div>
+              <div class="legend-item"><span class="legend-color" style="color: #f59e0b;"></span> FAILURE_MODE (Leaks, Seizure)</div>
+              <div class="legend-item"><span class="legend-color" style="color: #10b981;"></span> PARAMETER (Pressure, Temp)</div>
+              <div class="legend-item"><span class="legend-color" style="color: #8b5cf6;"></span> PERSON (Technician, Safety)</div>
+              <div class="legend-item"><span class="legend-color" style="color: #06b6d4;"></span> DOCUMENT (Manuals, Logs)</div>
+              <div class="legend-item"><span class="legend-color" style="color: #6b7280;"></span> DATE (Inspections, Events)</div>
+            </div>
+            
+            <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--secondary);">Ontology Rules</h3>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              1. <strong>Fuzzy Entity Resolution:</strong> Merges varying tag syntax (e.g. <em>Pump P101</em> and <em>P-101</em>) automatically with RapidFuzz.
+            </p>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              2. <strong>Regulatory Mapping:</strong> Associates equipment governed by OISD or PESO. Raises compliance gap flags if inspection logs exceed 365 days.
+            </p>
+            <p style="font-size: 0.9rem; color: var(--text-muted);">
+              3. <strong>Failure Analysis:</strong> Detects repetitive failure modes (3+ occurrences) and references OEM sections to retrieve recommendations.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>
