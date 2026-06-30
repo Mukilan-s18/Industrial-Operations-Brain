@@ -87,13 +87,13 @@ Rewritten Query:"""
 
 
 def retrieve_work_orders(state: RCAState):
-    retriever = get_retriever(["work_orders"])
+    retriever = get_retriever(["work_orders"], state["graph_builder"], state["user_role"])
     nodes = retriever._retrieve(QueryBundle(state['query']))
     return {"work_orders_context": nodes, "status": "Searching past work orders..."}
 
 
 def retrieve_sops(state: RCAState):
-    retriever = get_retriever(["sops", "regulations"])
+    retriever = get_retriever(["sops", "regulations"], state["graph_builder"], state["user_role"])
     nodes = retriever._retrieve(QueryBundle(state['query']))
     return {"sops_context": nodes, "status": "Searching SOPs and regulations..."}
 
