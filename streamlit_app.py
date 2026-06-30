@@ -476,7 +476,7 @@ with tab_graph:
     
     tab_doc1, tab_doc2 = st.tabs(["1-Page Architecture Summary", "Mermaid.js ER Diagram"])
     with tab_doc1:
-        arch_path = os.path.join(os.path.dirname(__file__), "docs", "technical_architecture.md")
+        arch_path = os.path.join(os.path.dirname(__file__), "architecture", "technical_architecture.md")
         if os.path.exists(arch_path):
             with open(arch_path, "r") as f:
                 arch_text = f.read()
