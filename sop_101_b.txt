@@ -1,0 +1,15 @@
+PUMP MAINTENANCE QUICK REFERENCE (SOP-101-B)
+Revision: 2
+
+This is a quick reference guide for all plant pumps including P-101.
+
+1. Maintenance
+- Power off and LOTO (Lockout/Tagout).
+- Remove housing bolts.
+- Check impeller.
+
+2. Torque Specifications
+Important: For P-101, all housing bolts must be tightened to a torque of 30 Nm. Do not over-tighten as it will warp the casing.
+
+3. Valve Limits
+Valve HV-204 should never exceed 150 PSI.
