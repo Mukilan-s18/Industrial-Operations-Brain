@@ -27,6 +27,7 @@ class RCAState(TypedDict):
     graph_builder: Any
     user_role: str
     original_query: str
+    live_sensor_context: str
     work_orders_context: list
     sops_context: list
     final_answer: str
@@ -89,6 +90,22 @@ Rewritten Query:"""
     return {"query": rewritten, "status": f"Rewrote query to: {rewritten}"}
 
 
+def check_live_sensors(state: RCAState):
+    """Phase 4: Read live SCADA IoT simulation data."""
+    import json
+    iot_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "iot_data.json"))
+    context = ""
+    try:
+        if os.path.exists(iot_path):
+            with open(iot_path, "r") as f:
+                data = json.load(f)
+            context = json.dumps(data.get("equipment", {}))
+    except Exception:
+        pass
+    
+    return {"live_sensor_context": f"LIVE SCADA METRICS (Vibration & Temp): {context}", "status": "Reading live SCADA sensors..."}
+
+
 def retrieve_work_orders(state: RCAState):
     retriever = get_retriever(["work_orders"], state["graph_builder"], state["user_role"])
     nodes = retriever._retrieve(QueryBundle(state['query']))
@@ -102,8 +119,16 @@ def retrieve_sops(state: RCAState):
 
 
 def synthesize(state: RCAState):
+    from llama_index.core.schema import NodeWithScore, TextNode
     llm = get_llm()
     all_nodes = state.get('work_orders_context', []) + state.get('sops_context', [])
+    
+    # Inject live sensor data into context for the LLM
+    live_ctx = state.get("live_sensor_context", "")
+    if live_ctx:
+        mock_node = TextNode(text=live_ctx, metadata={"source": "LIVE_SCADA_SENSORS"})
+        all_nodes.append(NodeWithScore(node=mock_node, score=1.0))
+        
     result: GenerationResult = generate_answer(state['query'], all_nodes, llm)
     return {
         "final_answer": result.answer,
@@ -148,13 +173,15 @@ def build_rca_graph():
     workflow = StateGraph(RCAState)
 
     workflow.add_node("rewrite", rewrite_query)
+    workflow.add_node("check_sensors", check_live_sensors)
     workflow.add_node("get_wo", retrieve_work_orders)
     workflow.add_node("get_sops", retrieve_sops)
     workflow.add_node("synthesize", synthesize)
     workflow.add_node("execute_action", execute_action)
 
     workflow.set_entry_point("rewrite")
-    workflow.add_edge("rewrite", "get_wo")
+    workflow.add_edge("rewrite", "check_sensors")
+    workflow.add_edge("check_sensors", "get_wo")
     workflow.add_edge("get_wo", "get_sops")
     workflow.add_edge("get_sops", "synthesize")
     workflow.add_edge("synthesize", "execute_action")

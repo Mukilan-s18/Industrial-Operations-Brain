@@ -183,6 +183,28 @@ with st.sidebar:
 
     st.session_state.offline_mode = offline
     
+    st.write("---")
+    st.subheader("Live SCADA / IoT Feed")
+    iot_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "iot_data.json"))
+    if os.path.exists(iot_path):
+        try:
+            import json
+            with open(iot_path, "r") as f:
+                iot_data = json.load(f)
+            timestamp = iot_data.get("timestamp", "Unknown")
+            st.caption(f"Last updated: {timestamp}")
+            for eq, metrics in iot_data.get("equipment", {}).items():
+                status_color = "🟢" if metrics["status"] == "NORMAL" else "🟡" if metrics["status"] == "WARNING" else "🔴"
+                st.markdown(f"**{eq}** {status_color}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Vibration", f"{metrics['vibration_mms']:.2f} mm/s")
+                with col2:
+                    st.metric("Temp", f"{metrics['temp_c']:.1f} °C")
+        except Exception as e:
+            st.error("Error reading IoT data.")
+    else:
+        st.info("IoT Simulator offline.")
     if st.session_state.offline_mode:
         st.warning("Offline Mode Active. Queries will be cached locally.")
         if st.session_state.offline_queue:
