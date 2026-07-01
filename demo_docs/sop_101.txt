@@ -1,0 +1,22 @@
+PUMP P-101 MAINTENANCE PROCEDURE (SOP-101)
+Revision: 4
+
+1. Purpose
+This Standard Operating Procedure (SOP) outlines the steps for routine maintenance of Pump P-101.
+
+2. Safety Warnings
+- Ensure all power is disconnected before servicing.
+- Wear appropriate PPE (gloves, safety glasses).
+
+3. Procedure Steps
+3.1. Isolate the pump by closing inlet valve HV-204 and outlet valve HV-205.
+3.2. Drain the casing completely.
+3.3. Remove the housing bolts using a cross-pattern.
+3.4. Inspect the impeller for wear or cavitation damage. Replace if tolerance exceeds 0.5mm.
+3.5. Reassemble the housing.
+
+4. Torque Specifications
+When reassembling, all housing bolts must be tightened to a torque of 45 Nm.
+
+5. Valve Pressure Limits
+The maximum allowable operating pressure for valve HV-204 is 120 PSI. Exceeding this limit may cause seal failure.

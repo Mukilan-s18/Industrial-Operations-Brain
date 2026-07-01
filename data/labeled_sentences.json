@@ -1,0 +1,65 @@
+[
+  {
+    "sentence": "Technician checked Pump P-101 in the morning.",
+    "entities": [
+      {"text": "P-101", "label": "EQUIPMENT"}
+    ]
+  },
+  {
+    "sentence": "Compressor C-201 showed severe vibration levels.",
+    "entities": [
+      {"text": "C-201", "label": "EQUIPMENT"},
+      {"text": "vibration level", "label": "PARAMETER"}
+    ]
+  },
+  {
+    "sentence": "A compliance audit was conducted under OISD-118.",
+    "entities": [
+      {"text": "OISD-118", "label": "REGULATION"}
+    ]
+  },
+  {
+    "sentence": "The mechanical seal leak on Pump P-102 was repaired.",
+    "entities": [
+      {"text": "P-102", "label": "EQUIPMENT"},
+      {"text": "seal leak", "label": "FAILURE_MODE"}
+    ]
+  },
+  {
+    "sentence": "We need to calibrate the safety valve per PESO rules.",
+    "entities": [
+      {"text": "PESO", "label": "REGULATION"}
+    ]
+  },
+  {
+    "sentence": "The discharge pressure of P-101 dropped to 4.5 bar.",
+    "entities": [
+      {"text": "discharge pressure", "label": "PARAMETER"},
+      {"text": "P-101", "label": "EQUIPMENT"}
+    ]
+  },
+  {
+    "sentence": "The inspection report dated 2025-06-01 shows no gaps.",
+    "entities": [
+      {"text": "2025-06-01", "label": "DATE"}
+    ]
+  },
+  {
+    "sentence": "Technician Rajesh Kumar performed the maintenance.",
+    "entities": [
+      {"text": "Rajesh Kumar", "label": "PERSON"}
+    ]
+  },
+  {
+    "sentence": "The bearing temperature reached 82 C on the pump.",
+    "entities": [
+      {"text": "bearing temperature", "label": "PARAMETER"}
+    ]
+  },
+  {
+    "sentence": "Compliance gap found on P-102 due to missing audit.",
+    "entities": [
+      {"text": "P-102", "label": "EQUIPMENT"}
+    ]
+  }
+]
