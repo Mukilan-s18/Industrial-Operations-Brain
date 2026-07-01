@@ -7,7 +7,6 @@ import logging
 import os
 from io import BytesIO
 from typing import Optional
-import concurrent.futures
 
 import cv2
 import numpy as np
@@ -96,6 +95,11 @@ def ocr_page(fitz_page, page_num: int) -> PageResult:
     is_handwriting_flagged = False
 
     try:
+        import signal
+
+        def _timeout_handler(signum, frame):
+            raise TimeoutError("Tesseract OCR timed out")
+
         # Convert page to high-resolution pixmap
         mat = fitz_page.get_pixmap(dpi=OCR_DPI)
         img_bytes = mat.tobytes("png")
@@ -104,31 +108,32 @@ def ocr_page(fitz_page, page_num: int) -> PageResult:
         # Pre-process
         processed = _preprocess_image(pil_image)
 
-        def _run_tesseract():
-            return pytesseract.image_to_data(
+        # Set timeout (Unix only)
+        if os.name != "nt":
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(OCR_TIMEOUT_SECONDS)
+
+        try:
+            # Get text + confidence data
+            data = pytesseract.image_to_data(
                 processed,
                 output_type=pytesseract.Output.DICT,
                 config="--psm 6"  # Assume uniform block of text
             )
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(_run_tesseract)
-            try:
-                data = future.result(timeout=OCR_TIMEOUT_SECONDS)
-            except concurrent.futures.TimeoutError:
-                raise TimeoutError("Tesseract OCR timed out")
-
-        text = " ".join(
-            word for word in data["text"] if word.strip()
-        )
-        confidence = _get_tesseract_confidence(data)
-
-        if confidence < HANDWRITING_CONFIDENCE_THRESHOLD:
-            is_handwriting_flagged = True
-            warnings.append(
-                f"Page {page_num}: Low OCR confidence ({confidence:.1f}%) — "
-                "possible handwriting or low quality scan"
+            text = " ".join(
+                word for word in data["text"] if word.strip()
             )
+            confidence = _get_tesseract_confidence(data)
+
+            if confidence < HANDWRITING_CONFIDENCE_THRESHOLD:
+                is_handwriting_flagged = True
+                warnings.append(
+                    f"Page {page_num}: Low OCR confidence ({confidence:.1f}%) — "
+                    "possible handwriting or low quality scan"
+                )
+        finally:
+            if os.name != "nt":
+                signal.alarm(0)  # Cancel alarm
 
     except TimeoutError:
         logger.warning(f"Page {page_num}: OCR timed out after {OCR_TIMEOUT_SECONDS}s")

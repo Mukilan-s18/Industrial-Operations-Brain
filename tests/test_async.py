@@ -93,7 +93,7 @@ def test_task_lifecycle():
     # Run in a thread (as the real endpoint does)
     thread = threading.Thread(
         target=run_ingestion_async,
-        args=(task_id, task_path, "test_large.pdf", "pdf", "dummy_hash_large"),
+        args=(task_id, task_path, "test_large.pdf", "pdf"),
         daemon=True,
     )
     thread.start()

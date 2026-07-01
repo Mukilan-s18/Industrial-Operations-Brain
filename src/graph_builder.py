@@ -1,95 +1,29 @@
-import yaml
 import networkx as nx
 from datetime import datetime
 from typing import List, Dict, Any, Tuple
 import json
 import os
 import re
-from rapidfuzz import fuzz
 from src.schema import Equipment, Regulation, FailureMode, Parameter, Person, Document, GraphEdge
 
 
 class KnowledgeGraphBuilder:
-    def __init__(self, config_path: str = None):
+    def __init__(self):
         self.G = nx.MultiDiGraph()
         
-        # Load config dynamically
-        if config_path is None:
-            config_path = os.path.join(os.path.dirname(__file__), "..", "graph_config.yaml")
-            
-        self.config = {}
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                self.config = yaml.safe_load(f) or {}
-                
-        self.manual_mappings = self.config.get("manual_mappings", {})
-        self.blocklist = self.config.get("blocklist", {})
-        self.equipment_rules = self.config.get("equipment_rules", [])
-        self.location_rules = self.config.get("location_rules", [])
-        self.regulation_metadata = self.config.get("regulation_metadata", [])
-
-    def resolve_node_id(self, node_id: str, label: str) -> str:
-        """
-        Resolves a raw node ID to an existing resolved node ID in the graph
-        using manual mappings, standard normalization, and rapidfuzz.
-        """
-        normalized = node_id.strip()
-        
-        # 1. Check manual mappings
-        if normalized in self.manual_mappings:
-            normalized = self.manual_mappings[normalized]
-            
-        # 2. Equipment-specific normalization (e.g. Pump P101 -> P-101)
-        if label == "EQUIPMENT":
-            match = re.search(r'([A-Z])[- ]?(\d{3,4})', normalized, re.IGNORECASE)
-            if match:
-                prefix = match.group(1).upper()
-                digits = match.group(2)
-                normalized = f"{prefix}-{digits}"
-                
-        if self.G.has_node(normalized):
-            return normalized
-            
-        # 3. Match against existing nodes of the same label in the graph
-        best_match = None
-        best_score = 0.0
-        
-        existing_nodes = [n for n, d in self.G.nodes(data=True) if d.get("label") == label]
-        
-        for ext_id in existing_nodes:
-            # Check blocklist
-            if ext_id in self.blocklist and normalized in self.blocklist[ext_id]:
-                continue
-            if normalized in self.blocklist and ext_id in self.blocklist[normalized]:
-                continue
-                
-            score = fuzz.ratio(normalized.lower(), ext_id.lower())
-            if score > best_score:
-                best_score = score
-                best_match = ext_id
-                
-        if best_score >= 90.0 and best_match:
-            return best_match
-            
-        return normalized
-
-    def add_node(self, node_id: str, label: str, properties: Dict[str, Any] = None) -> str:
-        """Adds a node with a label and properties. Resolves aliases on insertion."""
+    def add_node(self, node_id: str, label: str, properties: Dict[str, Any] = None):
+        """Adds a node with a label and properties."""
         if properties is None:
             properties = {}
-            
-        resolved_id = self.resolve_node_id(node_id, label)
         
         # Merge properties if node already exists
-        if self.G.has_node(resolved_id):
-            existing_props = self.G.nodes[resolved_id]
+        if self.G.has_node(node_id):
+            existing_props = self.G.nodes[node_id]
             # Ensure label remains consistent
             existing_props.update(properties)
             existing_props["label"] = label
         else:
-            self.G.add_node(resolved_id, label=label, **properties)
-            
-        return resolved_id
+            self.G.add_node(node_id, label=label, **properties)
 
     def add_edge(self, source: str, target: str, edge_type: str, confidence: float = 1.0, properties: Dict[str, Any] = None):
         """
@@ -167,63 +101,36 @@ class KnowledgeGraphBuilder:
             # Extract entities using spacy pipeline
             entities = ner_pipeline.extract_entities(content, existing_ids=existing_ids)
             
-            # Add extracted entities as nodes, resolving aliases on insertion
-            resolved_entity_ids = {} # raw_ent_id -> resolved_id
+            # Add extracted entities as nodes
             for ent in entities:
                 # Determine standard node details based on tag
                 node_properties = {"name": ent.text}
                 if ent.properties:
                     node_properties.update(ent.properties)
                     
-                # Dynamically resolve node ID
-                res_id = self.resolve_node_id(ent.id, ent.label)
-                resolved_entity_ids[ent.id] = res_id
-                    
                 if ent.label == "EQUIPMENT":
-                    # Infer equipment type dynamically from config rules
-                    eq_type = "Equipment"
-                    for r in self.equipment_rules:
-                        if re.search(r["pattern"], res_id):
-                            eq_type = r["type"]
-                            break
-                            
-                    # Infer location dynamically from config rules
-                    eq_location = "Main Plant"
-                    for r in self.location_rules:
-                        if re.search(r["pattern"], res_id):
-                            eq_location = r["location"]
-                            break
-                            
+                    # Infer equipment type
+                    eq_type = "Pump" if "P-" in ent.id else "Compressor" if "C-" in ent.id else "Equipment"
                     node_properties.update({
                         "type": eq_type,
-                        "location": eq_location
+                        "location": "Utility Block B" if "102" in ent.id else "Main Plant"
                     })
                 elif ent.label == "REGULATION":
-                    # Infer regulation metadata dynamically from config rules
-                    clause = "General"
-                    authority = "Government"
-                    for r in self.regulation_metadata:
-                        if re.search(r["pattern"], res_id):
-                            clause = r["clause"]
-                            authority = r["authority"]
-                            break
-                            
                     node_properties.update({
-                        "clause": clause,
-                        "authority": authority
+                        "clause": "Section 3.2" if "OISD" in ent.id else "Section 4",
+                        "authority": "OISD" if "OISD" in ent.id else "PESO" if "PESO" in ent.id else "Government"
                     })
                 elif ent.label == "FAILURE_MODE":
                     node_properties.update({
                         "severity": "High" if "severe" in content.lower() else "Medium"
                     })
                 
-                # Insert the node (re-resolves and stores/merges properties)
                 self.add_node(node_id=ent.id, label=ent.label, properties=node_properties)
                 
-                # Connect Document to Entity (MENTIONS) using the resolved ID
+                # Connect Document to Entity (MENTIONS)
                 self.add_edge(
                     source=doc_id,
-                    target=res_id,
+                    target=ent.id,
                     edge_type="MENTIONS",
                     confidence=0.95,
                     properties={"valid_from": doc_date}
@@ -254,12 +161,10 @@ class KnowledgeGraphBuilder:
                 
                 # 1. Connect Equipment -> FailureMode if they appear in the same sentence
                 for eq in s_equip:
-                    eq_resolved = resolved_entity_ids.get(eq.id, eq.id)
                     for fail in s_fail:
-                        fail_resolved = resolved_entity_ids.get(fail.id, fail.id)
                         self.add_edge(
-                            source=eq_resolved,
-                            target=fail_resolved,
+                            source=eq.id,
+                            target=fail.id,
                             edge_type="HAS_FAILURE",
                             confidence=0.90,
                             properties={"valid_from": doc_date}
@@ -267,12 +172,10 @@ class KnowledgeGraphBuilder:
                         
                 # 2. Connect Equipment -> Parameter if they appear in the same sentence
                 for eq in s_equip:
-                    eq_resolved = resolved_entity_ids.get(eq.id, eq.id)
                     for param in s_param:
-                        param_resolved = resolved_entity_ids.get(param.id, param.id)
                         self.add_edge(
-                            source=eq_resolved,
-                            target=param_resolved,
+                            source=eq.id,
+                            target=param.id,
                             edge_type="HAS_PARAMETER",
                             confidence=0.90,
                             properties={"valid_from": doc_date}
@@ -280,12 +183,10 @@ class KnowledgeGraphBuilder:
                 
                 # 3. Connect Equipment -> Regulation if they appear in the same sentence
                 for eq in s_equip:
-                    eq_resolved = resolved_entity_ids.get(eq.id, eq.id)
                     for reg in s_reg:
-                        reg_resolved = resolved_entity_ids.get(reg.id, reg.id)
                         self.add_edge(
-                            source=eq_resolved,
-                            target=reg_resolved,
+                            source=eq.id,
+                            target=reg.id,
                             edge_type="GOVERNED_BY",
                             confidence=0.95,
                             properties={"valid_from": doc_date}
@@ -295,75 +196,45 @@ class KnowledgeGraphBuilder:
                 is_inspection_sent = any(w in s_text for w in ["inspect", "audit", "check", "last inspection", "record"])
                 if is_inspection_sent:
                     for eq in s_equip:
-                        eq_resolved = resolved_entity_ids.get(eq.id, eq.id)
                         for dt in s_date:
                             # Verify that it is actually a YYYY-MM-DD date and not a generic string
                             if re.match(r'^\d{4}-\d{2}-\d{2}$', dt.id):
                                 self.add_edge(
-                                    source=eq_resolved,
+                                    source=eq.id,
                                     target=dt.id,
                                     edge_type="HAS_INSPECTION",
                                     confidence=0.95,
                                     properties={"valid_from": dt.id}
                                 )
 
-            # Fallback domain-knowledge structural rules from config (Day 4 & Day 7)
-            # Map equipment -> regulations based on type and context dynamically
+            # Fallback domain-knowledge structural rules (Day 4 & Day 7)
+            # Map equipment -> regulations based on type and context
             for ent in entities:
                 if ent.label == "EQUIPMENT":
-                    res_id = resolved_entity_ids.get(ent.id, ent.id)
-                    # Check matching rules from config
-                    for rule in self.equipment_rules:
-                        if re.search(rule["pattern"], res_id):
-                            for reg_info in rule.get("default_regulations", []):
-                                self.add_node(
-                                    node_id=reg_info["id"],
-                                    label=reg_info["label"],
-                                    properties={
-                                        "clause": reg_info["clause"],
-                                        "authority": reg_info["authority"]
-                                    }
-                                )
-                                self.add_edge(
-                                    source=res_id,
-                                    target=reg_info["id"],
-                                    edge_type="GOVERNED_BY",
-                                    confidence=0.95,
-                                    properties={"valid_from": doc_date}
-                                )
-                            break
+                    # All pumps are governed by OISD-118 and Factory Act
+                    if "P-" in ent.id:
+                        self.add_node("OISD-118", "REGULATION", {"clause": "Section 3.2", "authority": "OISD"})
+                        self.add_edge(ent.id, "OISD-118", "GOVERNED_BY", confidence=0.95, properties={"valid_from": doc_date})
+                        
+                        self.add_node("Factory Act", "REGULATION", {"clause": "Section 4", "authority": "State Government"})
+                        self.add_edge(ent.id, "Factory Act", "GOVERNED_BY", confidence=0.95, properties={"valid_from": doc_date})
+                    # All compressors are governed by PESO and Factory Act
+                    elif "C-" in ent.id:
+                        self.add_node("PESO", "REGULATION", {"clause": "Section 4", "authority": "PESO"})
+                        self.add_edge(ent.id, "PESO", "GOVERNED_BY", confidence=0.95, properties={"valid_from": doc_date})
+                        
+                        self.add_node("Factory Act", "REGULATION", {"clause": "Section 4", "authority": "State Government"})
+                        self.add_edge(ent.id, "Factory Act", "GOVERNED_BY", confidence=0.95, properties={"valid_from": doc_date})
 
+                        
         return len(self.G.nodes), len(self.G.edges)
 
-    def get_compliance_gaps(self, current_date_str: str = None) -> List[Dict[str, Any]]:
+    def get_compliance_gaps(self, current_date_str: str = "2025-09-01") -> List[Dict[str, Any]]:
         """
         Compliance gap query: find Equipment governed by a Regulation,
         but lacking a HAS_INSPECTION edge within the last 365 days.
-        If current_date_str is None, it dynamically uses the maximum date found in the graph.
         """
-        if current_date_str is None:
-            # Dynamically determine the maximum date present in the graph
-            dates = []
-            for node, ndata in self.G.nodes(data=True):
-                if ndata.get("label") == "DATE":
-                    try:
-                        dates.append(datetime.strptime(node, "%Y-%m-%d"))
-                    except ValueError:
-                        pass
-                elif ndata.get("label") == "DOCUMENT" and ndata.get("date"):
-                    try:
-                        dates.append(datetime.strptime(ndata["date"], "%Y-%m-%d"))
-                    except ValueError:
-                        pass
-            if dates:
-                current_date = max(dates)
-                current_date_str = current_date.strftime("%Y-%m-%d")
-            else:
-                current_date = datetime.now()
-                current_date_str = current_date.strftime("%Y-%m-%d")
-        else:
-            current_date = datetime.strptime(current_date_str, "%Y-%m-%d")
-
+        current_date = datetime.strptime(current_date_str, "%Y-%m-%d")
         gaps = []
         
         # Traverse graph for Equipment nodes
@@ -382,6 +253,7 @@ class KnowledgeGraphBuilder:
                 inspections = []
                 for _, target, edata in self.G.out_edges(node, data=True):
                     if edata.get("type") == "HAS_INSPECTION":
+                        # The target node should be a DATE entity
                         inspections.append(target)
                         
                 # Determine the latest inspection date
@@ -417,7 +289,7 @@ class KnowledgeGraphBuilder:
                             "equipment_id": node,
                             "equipment_type": ndata.get("type", "Unknown"),
                             "regulation_id": reg,
-                            "authority": self.G.nodes[reg].get("authority", "Unknown") if reg in self.G.nodes else "Unknown",
+                            "authority": self.G.nodes[reg].get("authority", "Unknown"),
                             "last_inspection": latest_inspection or "Never",
                             "days_overdue": (days_since_inspection - 365) if days_since_inspection else 9999,
                             "reason": reason

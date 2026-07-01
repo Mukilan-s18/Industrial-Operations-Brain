@@ -4,25 +4,14 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pyvis.network import Network
-from pydantic import BaseModel
 from src.ner_pipeline import NERPipeline
 from src.graph_builder import KnowledgeGraphBuilder
-from src.rag_agent import RagAgent
 
 app = FastAPI(title="Industrial Copilot - Knowledge Graph API")
 
 # Initialize and build graph on startup
 ner = NERPipeline()
 builder = KnowledgeGraphBuilder()
-rag_agent = RagAgent(builder)
-
-class QueryRequest(BaseModel):
-    query: str
-    role: str
-
-@app.post("/query")
-def process_query(req: QueryRequest):
-    return rag_agent.query(req.query, req.role)
 
 # Load mock documents and build graph
 DOCS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "documents.json")
@@ -47,12 +36,11 @@ def get_stats():
     return builder.get_graph_stats()
 
 @app.get("/api/compliance-gaps")
-def get_compliance_gaps(date: str = None):
+def get_compliance_gaps(date: str = "2025-09-01", role: str = Query(None, description="User Role")):
+    # RBAC Enforcement: Operators cannot view compliance data
+    if role and "Operator" in role:
+        return []
     return builder.get_compliance_gaps(date)
-
-@app.get("/api/ner-evaluation")
-def get_ner_evaluation():
-    return ner.evaluate_accuracy()
 
 @app.get("/api/failure-patterns")
 def get_failure_patterns():
@@ -84,7 +72,7 @@ def get_edges():
     return edges_list
 
 @app.get("/api/graph-viz", response_class=HTMLResponse)
-def get_graph_viz(node_id: str = Query(None, description="Ego network center node")):
+def get_graph_viz(node_id: str = Query(None, description="Ego network center node"), role: str = Query(None, description="User Role")):
     """
     Generates a PyVis interactive visualization of the graph.
     If node_id is provided, generates the 1-hop ego network for that node.
@@ -106,11 +94,17 @@ def get_graph_viz(node_id: str = Query(None, description="Ego network center nod
             raise HTTPException(status_code=404, detail="Node not found")
         # Extract ego network (neighbors and edges between neighbors)
         ego_nodes = [node_id] + list(builder.G.successors(node_id)) + list(builder.G.predecessors(node_id))
-        sub_g = builder.G.subgraph(ego_nodes)
+        sub_g = builder.G.subgraph(ego_nodes).copy()
         title = f"Ego Network - {node_id}"
     else:
-        sub_g = builder.G
+        sub_g = builder.G.copy()
         title = "Plant Knowledge Graph"
+        
+    # RBAC Enforcement: Filter Graph Nodes based on role
+    if role and "Operator" in role:
+        # Operators should not see regulation or highly sensitive audit nodes
+        restricted_nodes = [n for n, d in sub_g.nodes(data=True) if d.get("label") == "REGULATION"]
+        sub_g.remove_nodes_from(restricted_nodes)
 
     # Create PyVis Network
     net = Network(

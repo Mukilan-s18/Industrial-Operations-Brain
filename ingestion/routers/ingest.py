@@ -11,7 +11,7 @@ import threading
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, Request
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from ingestion.models.schemas import (
@@ -20,7 +20,9 @@ from ingestion.models.schemas import (
     IngestionResult,
     PageResult,
 )
-from ingestion.utils.pipeline import run_extraction_pipeline
+from ingestion.processors.excel_processor import extract_excel
+from ingestion.processors.pdf_processor import extract_pdf
+from ingestion.processors.workorder_processor import extract_work_orders
 from ingestion.utils.deduplication import (
     check_duplicate,
     register_document,
@@ -45,30 +47,15 @@ from ingestion.utils.validation import get_file_category, validate_file
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ingest", tags=["ingestion"])
 
-VERSION_REGISTRY_FILE = Path("version_registry.json")
-
-def load_version_registry():
-    if VERSION_REGISTRY_FILE.exists():
-        try:
-            with open(VERSION_REGISTRY_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
-
-def save_version_registry(registry):
-    with open(VERSION_REGISTRY_FILE, "w") as f:
-        json.dump(registry, f)
-
 # In-process version registry for conflict detection: title → (doc_id, rev_number)
-_version_registry: dict = load_version_registry()
+_version_registry: dict = {}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # POST /ingest/
 # ─────────────────────────────────────────────────────────────────────────────
 @router.post("/", summary="Ingest a document (async for large files)")
-async def ingest_document(request: Request, file: UploadFile = File(...)):
+async def ingest_document(file: UploadFile = File(...)):
     """
     Ingest a PDF, Excel, or CSV file.
 
@@ -76,14 +63,8 @@ async def ingest_document(request: Request, file: UploadFile = File(...)):
     - **Large files** (≥5MB or ≥50 pages): processed in background, returns `{task_id, status}`.
       Poll `GET /ingest/status/{task_id}` for the result.
     """
-    # Security: check upload size early (max 100MB)
-    content_length = request.headers.get("content-length")
-    if content_length and int(content_length) > 100 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large (max 100MB)")
-
     start_time = time.perf_counter()
     warnings = []
-    handed_off_to_async = False
 
     # ── 1. Save to temp file ──────────────────────────────────────────────────
     suffix = Path(file.filename).suffix.lower() if file.filename else ".bin"
@@ -115,11 +96,10 @@ async def ingest_document(request: Request, file: UploadFile = File(...)):
         # ── 4. Large file → async ─────────────────────────────────────────────
         if should_process_async(tmp_path):
             task_id = create_task(source=file.filename or "unknown")
-            handed_off_to_async = True
             # Hand off tmp_path ownership to the background thread
             thread = threading.Thread(
                 target=run_ingestion_async,
-                args=(task_id, tmp_path, file.filename or "unknown", category, file_hash),
+                args=(task_id, tmp_path, file.filename or "unknown", category),
                 daemon=True,
             )
             thread.start()
@@ -135,8 +115,20 @@ async def ingest_document(request: Request, file: UploadFile = File(...)):
             )
 
         # ── 5. Small file → synchronous extraction ────────────────────────────
-        pages, doc_type, pipe_warnings = run_extraction_pipeline(tmp_path, category)
-        warnings.extend(pipe_warnings)
+        if category == "pdf":
+            pages, doc_type = extract_pdf(tmp_path)
+        elif category == "excel":
+            pages = extract_excel(tmp_path)
+            doc_type = DocType.TABLE_HEAVY
+        elif category == "csv":
+            records = extract_work_orders(tmp_path)
+            text = json.dumps(records, indent=2, default=str)
+            pages = [PageResult(page=1, text=text, is_ocr=False)]
+            doc_type = DocType.TABLE_HEAVY
+            if any(r["requires_manual_review"] for r in records):
+                warnings.append("Some work order records missing equipment_id — require manual review.")
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported file category: {category}")
 
         # ── 6. Metadata extraction ────────────────────────────────────────────
         first_pages_text = " ".join(p.text for p in pages[:3])
@@ -172,7 +164,6 @@ async def ingest_document(request: Request, file: UploadFile = File(...)):
                     has_conflict = True
 
         _version_registry[norm_title] = (file_hash, rev_number)
-        save_version_registry(_version_registry)
 
         # ── 8. Build and return result ────────────────────────────────────────
         metadata = DocumentMetadata(
@@ -205,12 +196,11 @@ async def ingest_document(request: Request, file: UploadFile = File(...)):
 
     finally:
         # Only clean up temp file for sync path — async path handles its own cleanup
-        if not handed_off_to_async:
-            try:
-                if tmp_path.exists():
-                    tmp_path.unlink(missing_ok=True)
-            except Exception:
-                pass
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -245,24 +235,3 @@ async def get_ingestion_status(task_id: str):
         response["error"] = record.error
 
     return JSONResponse(content=response)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# GET /ingest/list
-# ─────────────────────────────────────────────────────────────────────────────
-@router.get("/list", summary="List ingested documents")
-async def list_documents():
-    return JSONResponse(content={"registry": _version_registry})
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# POST /ingest/reset
-# ─────────────────────────────────────────────────────────────────────────────
-@router.post("/reset", summary="Reset document registry")
-async def reset_registry():
-    global _version_registry
-    _version_registry = {}
-    save_version_registry(_version_registry)
-    
-    # We can also clean up deduplication cache if there's a function for it
-    return JSONResponse(content={"message": "Registry reset successfully"})
