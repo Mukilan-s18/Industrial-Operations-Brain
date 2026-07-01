@@ -182,7 +182,7 @@ class NERPipeline:
         """
         import json
         if labeled_sentences_path is None:
-            labeled_sentences_path = os.path.join(os.path.dirname(__file__), "..", "data", "labeled_sentences.json")
+            labeled_sentences_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "labeled_sentences.json")
             
         if not os.path.exists(labeled_sentences_path):
             return {
