@@ -7,7 +7,44 @@ import datetime
 import time
 import requests
 import sqlite3
-from backend.app import builder, ner, get_graph_viz
+class MockG:
+    @property
+    def nodes(self):
+        try:
+            nodes_data = requests.get("http://127.0.0.1:8000/api/nodes").json()
+            return [n["id"] for n in nodes_data]
+        except:
+            return []
+
+class MockBuilder:
+    def __init__(self):
+        self.G = MockG()
+        
+    def get_graph_stats(self):
+        try:
+            return requests.get("http://127.0.0.1:8000/api/stats").json()
+        except:
+            return {"nodes": 0, "edges": 0, "components": 0, "compliance_gaps": 0}
+
+class MockNER:
+    def evaluate_accuracy(self):
+        try:
+            return requests.get("http://127.0.0.1:8000/api/ner-evaluation").json()
+        except:
+            return {"accuracy": 0, "f1_score": 0, "entities": []}
+
+def get_graph_viz(node_id=None, role=None):
+    try:
+        params = {}
+        if node_id and node_id != "All Nodes": params["node_id"] = node_id
+        if role: params["role"] = role
+        res = requests.get("http://127.0.0.1:8000/api/graph-viz", params=params)
+        return res.text
+    except:
+        return "<div style='color: white;'>Error loading graph visualization. Ensure backend is running.</div>"
+
+builder = MockBuilder()
+ner = MockNER()
 
 # Set page configuration
 st.set_page_config(
@@ -19,83 +56,186 @@ st.set_page_config(
 # Custom Minimal Professional Styling (Light Theme)
 st.markdown("""
     <style>
-    /* Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800&family=Fira+Code:wght@300;400;500;600;700&display=swap');
     
-    /* Global Styles */
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-        background-color: #f8f9fa;
-        color: #1f2937;
+    html { scroll-behavior: smooth; }
+    
+    html, body, [class*="css"], .stApp {
+        font-family: 'JetBrains Mono', monospace !important;
+        background-color: #050505 !important;
+        color: #E2E8F0;
+        -webkit-font-smoothing: antialiased;
     }
-    
-    /* Bold Headings */
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #050505; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+
     h1, h2, h3, h4, h5, h6 {
-        font-weight: 800 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 700 !important;
+        color: #FFFFFF !important;
+        letter-spacing: -0.04em;
+        text-transform: uppercase;
     }
+    h1 { font-size: 2.2rem !important; line-height: 1.1 !important; margin-bottom: 1rem !important; }
+    h2 { font-size: 1.7rem !important; line-height: 1.2 !important; margin-bottom: 0.8rem !important; }
+    h3 { font-size: 1.3rem !important; line-height: 1.3 !important; }
+    h4 { font-size: 1.1rem !important; }
+    p, span, div, label { font-size: 0.95rem; line-height: 1.6; }
     
-    /* Clean Cards */
     .clean-card {
-        background-color: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 6px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-    
-    /* Minimal Title */
-    .title-text {
-        font-weight: 800;
-        color: #111827;
-        letter-spacing: -0.5px;
-    }
-    
-    /* Alert Styles */
-    .contradiction-alert {
-        background-color: #fef2f2;
-        border-left: 4px solid #ef4444;
-        color: #991b1b;
-        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 4px;
-        margin: 12px 0;
-        font-size: 14px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        animation: fadeIn 0.6s ease-out forwards;
+    }
+    .clean-card:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .title-text {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 800;
+        color: #000;
+        letter-spacing: -0.05em;
+        text-transform: uppercase;
+        border-bottom: 2px solid #FFFFFF;
+        display: inline-block;
+        padding-bottom: 4px;
+    }
+    
+    [data-testid="stSidebar"] {
+        background-color: #0A0A0B !important;
+        border-right: 1px solid #222 !important;
+        padding-top: 2rem;
+    }
+    
+    .stSelectbox > div[data-baseweb="select"] > div {
+        background-color: #1A1A1C;
+        border: 1px solid #333;
+        border-radius: 2px;
+        color: #E2E8F0;
+        font-family: 'JetBrains Mono', monospace !important;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .stSelectbox > div[data-baseweb="select"] > div:hover { border-color: #666; }
+    
+    .streamlit-expanderHeader {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 600 !important;
+        color: #FFFFFF !important;
+        background-color: rgba(255, 255, 255, 0.02) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 2px !important;
+        padding: 12px 16px !important;
+        transition: all 0.3s ease;
+    }
+    .streamlit-expanderHeader:hover {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    .streamlit-expanderContent {
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-top: none !important;
+        padding: 20px !important;
+        animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        background-color: #0A0A0B !important;
+    }
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .contradiction-alert {
+        background-color: rgba(255, 50, 50, 0.05);
+        border: 1px solid rgba(255, 50, 50, 0.2);
+        border-left: 4px solid #FF3333;
+        color: #FFB3B3;
+        padding: 16px;
+        border-radius: 2px;
+        margin: 16px 0;
+        font-size: 13px;
+        font-family: 'JetBrains Mono', monospace;
     }
     .compliance-alert {
-        background-color: #fffbeb;
-        border-left: 4px solid #f59e0b;
-        color: #92400e;
-        padding: 12px 16px;
-        border-radius: 4px;
-        margin: 12px 0;
-        font-size: 14px;
+        background-color: rgba(255, 170, 0, 0.05);
+        border: 1px solid rgba(255, 170, 0, 0.2);
+        border-left: 4px solid #FFAA00;
+        color: #FFE6B3;
+        padding: 16px;
+        border-radius: 2px;
+        margin: 16px 0;
+        font-size: 13px;
+        font-family: 'JetBrains Mono', monospace;
     }
     
-    /* Persona Banner */
     .persona-banner {
-        background-color: #f3f4f6;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        padding: 12px 16px;
-        margin-bottom: 24px;
-        font-size: 14px;
-        color: #4b5563;
+        background-color: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-left: 4px solid #FFFFFF;
+        border-radius: 2px;
+        padding: 16px 20px;
+        margin-bottom: 32px;
+        font-size: 13px;
+        color: #E2E8F0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: fadeIn 0.8s ease-out forwards;
     }
     
-    /* Buttons */
     div.stButton > button {
-        background-color: transparent;
-        color: #0284c7;
-        border: 1px solid #0ea5e9;
-        border-radius: 4px;
-        padding: 6px 16px;
-        font-weight: 500;
-        transition: all 0.2s ease;
+        background-color: #FFFFFF;
+        color: #000000;
+        border: 1px solid #FFFFFF;
+        border-radius: 2px;
+        padding: 8px 24px;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        transition: all 0.3s ease;
     }
     div.stButton > button:hover {
-        background-color: rgba(14, 165, 233, 0.05);
-        color: #0369a1;
-        border-color: #0284c7;
+        background-color: transparent;
+        color: #000;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+    
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2rem;
+        border-bottom: 1px solid #222;
+    }
+    .stTabs [data-baseweb="tab"] {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        font-weight: 500;
+        color: #666;
+        border-bottom-color: transparent !important;
+        font-family: 'JetBrains Mono', monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 12px;
+        transition: color 0.3s ease;
+    }
+    .stTabs [data-baseweb="tab"]:hover { color: #AAA; }
+    .stTabs [aria-selected="true"] {
+        color: #FFFFFF !important;
+        border-bottom: 2px solid #FFFFFF !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -147,7 +287,7 @@ PERSONAS = {
 # SIDEBAR Setup
 with st.sidebar:
     st.markdown("<h2 class='title-text' style='margin-bottom: 5px; font-size: 20px;'>Operations Brain</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 0.85em; color: #6b7280; margin-top:0;'>Compliance & Ingestion Frontend</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 0.85em; color: #94A3B8; margin-top:0;'>Compliance & Ingestion Frontend</p>", unsafe_allow_html=True)
     st.write("---")
     
     # Persona Switcher
@@ -245,17 +385,18 @@ tab_chat, tab_graph, tab_compliance, tab_audit = st.tabs([
 
 # Tab 1: Interactive Brain Query
 with tab_chat:
-    st.markdown("<div class='clean-card'><h4>Intelligent Operations Query</h4><p style='font-size:0.9em; color:#6b7280;'>Ask the Brain about operating instructions, specs, or logs. Try checking casing bolt torques for P-101.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='clean-card'><h4>Intelligent Operations Query</h4><p style='font-size:0.9em; color:#94A3B8;'>Ask the Brain about operating instructions, specs, or logs. Try checking casing bolt torques for P-101.</p></div>", unsafe_allow_html=True)
     
     # Speech Recognition Simulation HTML/JS Injector
     st.markdown("##### Speech-to-Text Input")
     speech_html = """
-    <div style="background-color: #ffffff; border: 1px solid #e5e7eb; padding: 12px; border-radius: 6px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+    <div style="background-color: #0A0A0B; border: 1px solid #333; padding: 12px; border-radius: 6px; display: flex; align-items: center; gap: 15px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
         <button id="mic-btn" style="background: transparent; border: 1px solid #0ea5e9; border-radius: 4px; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
         </button>
-        <span id="mic-status" style="font-size: 0.9em; color: #6b7280;">Click to speak...</span>
-        <input type="text" id="transcription-box" placeholder="Transcript..." style="flex-grow: 1; padding: 8px 12px; border-radius: 4px; border: 1px solid #d1d5db; background: #f9fafb; color: #1f2937; font-family: 'Inter', sans-serif;" readonly>
+        <span id="mic-status" style="font-size: 0.85em; color: #38BDF8; font-family: 'JetBrains Mono', monospace; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;"><span style="display:inline-block; width:6px; height:6px; background-color:#38BDF8; border-radius:50%; box-shadow: 0 0 8px #38BDF8; animation: pulse 2s infinite;"></span> Click to speak...</span>
+<style>@keyframes pulse { 0% { opacity: 0.5; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.5; transform: scale(0.8); } }</style>
+        <input type="text" id="transcription-box" placeholder="Transcript..." style="flex-grow: 1; padding: 8px 12px; border-radius: 4px; border: 1px solid #d1d5db; background: #f9fafb; color: #1f2937; font-family: 'Work Sans', sans-serif;" readonly>
         <button id="copy-btn" style="background: #f3f4f6; border: 1px solid #0ea5e9; border-radius: 4px; color: #0284c7; padding: 8px 12px; cursor: pointer; font-family: 'Inter', sans-serif;">Copy</button>
     </div>
     
@@ -443,7 +584,7 @@ with tab_chat:
 
 # Tab: Knowledge Graph & Schema Explorer
 with tab_graph:
-    st.markdown("<div class='clean-card'><h3>Knowledge Graph Explorer</h3><p style='font-size: 0.95em; color: #4b5563;'>Explore plant asset relationships, compliance constraints, and failure modes interactively.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='clean-card'><h3>Knowledge Graph Explorer</h3><p style='font-size: 0.95em; color: #94A3B8;'>Explore plant asset relationships, compliance constraints, and failure modes interactively.</p></div>", unsafe_allow_html=True)
     
     # Graph stats cards
     stats = builder.get_graph_stats()
@@ -531,18 +672,19 @@ with tab_graph:
         st.write("This diagram specifies the entity-relationship ontology of our heavy-industry graph schema.")
         # Mermaid code
         er_code = """erDiagram
-    DOCUMENT ||--o{ PERSON : AUTHORED_BY
-    DOCUMENT ||--o{ EQUIPMENT : MENTIONS
-    DOCUMENT ||--o{ REGULATION : MENTIONS
-    EQUIPMENT ||--o{ FAILURE_MODE : HAS_FAILURE
-    EQUIPMENT ||--o{ REGULATION : GOVERNED_BY
-    EQUIPMENT ||--o{ PARAMETER : HAS_PARAMETER
-    EQUIPMENT ||--o{ DATE : HAS_INSPECTION"""
+    DOCUMENT ||--o{ PERSON : "AUTHORED BY"
+    DOCUMENT ||--o{ EQUIPMENT : "MENTIONS"
+    DOCUMENT ||--o{ REGULATION : "MENTIONS"
+    EQUIPMENT ||--o{ "FAILURE_MODE" : "HAS FAILURE"
+    EQUIPMENT ||--o{ REGULATION : "GOVERNED BY"
+    EQUIPMENT ||--o{ PARAMETER : "HAS PARAMETER"
+    EQUIPMENT ||--o{ DATE : "HAS INSPECTION"
+        """
         
         # Render Mermaid using browser-based compiler in iframe
         components.html(
             f"""
-            <div style="background-color: #0F172A; padding: 20px; border-radius: 8px; display: flex; justify-content: center; align-items: center; border: 1px solid #334155;">
+            <div style="background-color: #1F1F1F; padding: 20px; border-radius: 8px; display: flex; justify-content: center; align-items: center; border: 1px dashed #333333;">
                 <pre class="mermaid" style="margin: 0; color: #F8FAFC;">
                 {er_code}
                 </pre>
@@ -563,7 +705,7 @@ with tab_compliance:
         st.error("Access Restrained. You must be logged in as Arjun (Auditor) to view the compliance matrix and generate evidence bundles.")
         st.info("Hint: Switch your persona to 'Arjun (Auditor)' in the left sidebar to unlock this tab.")
     else:
-        st.markdown("<div class='clean-card'><h3>Regulatory Compliance Dashboard</h3><p style='font-size: 0.95em; color: #4b5563;'>This matrix maps equipment operations and maintenance history against statutory Indian standards (OISD, PESO).</p></div>", unsafe_allow_html=True)
+        st.markdown("<div class='clean-card'><h3>Regulatory Compliance Dashboard</h3><p style='font-size: 0.95em; color: #94A3B8;'>This matrix maps equipment operations and maintenance history against statutory Indian standards (OISD, PESO).</p></div>", unsafe_allow_html=True)
         
         # Fetch Compliance Matrix Data from Backend API
         try:
@@ -633,7 +775,7 @@ with tab_compliance:
 
 # Tab 4: Admin Logs
 with tab_audit:
-    st.markdown("<div class='clean-card'><h3>Security & Query Audit Logs</h3><p style='font-size:0.9em; color:#4b5563;'>Full traceability of all user prompts, session logins, and security status. Satisfies corporate auditing requirements.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='clean-card'><h3>Security & Query Audit Logs</h3><p style='font-size:0.9em; color:#94A3B8;'>Full traceability of all user prompts, session logins, and security status. Satisfies corporate auditing requirements.</p></div>", unsafe_allow_html=True)
     
     # Audit log search/filter
     st.text("System Audit Stream:")
@@ -642,16 +784,16 @@ with tab_audit:
     for log in reversed(st.session_state.audit_logs):
         status_color = "#059669" if log["status"] in ["SUCCESS", "SYNCED"] else "#dc2626"
         log_rows += f"""
-        <div style="border-bottom: 1px solid #e5e7eb; padding: 10px 0; display:flex; justify-content:space-between; font-family:'JetBrains Mono', monospace; font-size:13px;">
+        <div style="border-bottom: 1px solid #e5e7eb; padding: 10px 0; display:flex; justify-content:space-between; font-family:'Work Sans', sans-serif; font-size:13px;">
             <span style="color:#0ea5e9;">[{log['timestamp']}]</span>
             <span style="color:#111827; width: 160px; margin-left: 10px;">{log['role']}</span>
-            <span style="color:#4b5563; flex-grow:1; margin-left: 15px;">Query: "{log['query']}"</span>
+            <span style="color:#94A3B8; flex-grow:1; margin-left: 15px;">Query: "{log['query']}"</span>
             <span style="color:{status_color}; font-weight:500;">{log['status']}</span>
         </div>
         """
     
     st.markdown(f"""
-        <div style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px; max-height: 400px; overflow-y: auto;">
+        <div style="background-color: #0A0A0B; border: 1px solid #333; border-radius: 6px; padding: 16px; max-height: 400px; overflow-y: auto;">
             {log_rows}
         </div>
     """, unsafe_allow_html=True)
