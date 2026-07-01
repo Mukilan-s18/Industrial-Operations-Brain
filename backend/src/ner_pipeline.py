@@ -13,7 +13,7 @@ class NERPipeline:
         
         # Load config dynamically
         if config_path is None:
-            config_path = os.path.join(os.path.dirname(__file__), "..", "graph_config.yaml")
+            config_path = os.path.join(os.path.dirname(__file__), "..", "config", "graph_config.yaml")
             
         self.config = {}
         if os.path.exists(config_path):
