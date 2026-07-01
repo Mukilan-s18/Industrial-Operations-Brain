@@ -37,6 +37,9 @@ class RCAState(TypedDict):
     sources: list
     faithfulness_score: float
     abstained: bool
+    # Tool execution
+    action_taken: str
+    action_result: str
 
 
 # Singleton-style caching for expensive objects
@@ -113,6 +116,33 @@ def synthesize(state: RCAState):
     }
 
 
+def execute_action(state: RCAState):
+    """Day 8: Closed-Loop Agentic Action Execution (SAP Mock)"""
+    ans = state.get("final_answer", "").lower()
+    # If the LLM synthesis recommends creating a work order or detects a critical failure, take action!
+    if "work order" in ans and ("create" in ans or "critical" in ans or "recommend" in ans or "draft" in ans):
+        mock_id = f"SAP-WO-{int(time.time())}"
+        import sqlite3
+        db_path = os.path.join(os.path.dirname(__file__), "..", "..", "mock_sap.db")
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("CREATE TABLE IF NOT EXISTS work_orders (id TEXT, description TEXT)")
+        c.execute("INSERT INTO work_orders VALUES (?, ?)", (mock_id, f"Agentic Generated based on query: {state['query']}"))
+        conn.commit()
+        conn.close()
+        
+        return {
+            "action_taken": "CREATE_SAP_WO",
+            "action_result": f"Successfully created Work Order {mock_id} in SAP.",
+            "status": f"Agent executed action: Created Work Order {mock_id}"
+        }
+    return {
+        "action_taken": "NONE",
+        "action_result": "",
+        "status": "No action required."
+    }
+
+
 # --- Build Graph ---
 def build_rca_graph():
     workflow = StateGraph(RCAState)
@@ -121,12 +151,14 @@ def build_rca_graph():
     workflow.add_node("get_wo", retrieve_work_orders)
     workflow.add_node("get_sops", retrieve_sops)
     workflow.add_node("synthesize", synthesize)
+    workflow.add_node("execute_action", execute_action)
 
     workflow.set_entry_point("rewrite")
     workflow.add_edge("rewrite", "get_wo")
     workflow.add_edge("get_wo", "get_sops")
     workflow.add_edge("get_sops", "synthesize")
-    workflow.add_edge("synthesize", END)
+    workflow.add_edge("synthesize", "execute_action")
+    workflow.add_edge("execute_action", END)
 
     return workflow.compile()
 

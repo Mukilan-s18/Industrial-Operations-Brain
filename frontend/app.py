@@ -370,6 +370,15 @@ with tab_chat:
                             </div>
                         """
                         
+                    if data.get("action_taken") == "CREATE_SAP_WO":
+                        action_res = data.get("action_result", "")
+                        html_payload += f"""
+                            <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; color: #166534; padding: 12px 16px; border-radius: 4px; margin: 12px 0; font-size: 14px;">
+                                <b>🤖 AGENT ACTION EXECUTED: SAP CMMS Tool</b><br>
+                                {action_res}
+                            </div>
+                        """
+
                     # Format citations
                     raw_sources = data.get("sources", [])
                     citations = []

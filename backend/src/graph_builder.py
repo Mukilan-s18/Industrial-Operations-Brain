@@ -202,15 +202,18 @@ class KnowledgeGraphBuilder:
                     # Infer regulation metadata dynamically from config rules
                     clause = "General"
                     authority = "Government"
+                    interval = 365
                     for r in self.regulation_metadata:
                         if re.search(r["pattern"], res_id):
                             clause = r["clause"]
                             authority = r["authority"]
+                            interval = r.get("interval", 365)
                             break
                             
                     node_properties.update({
                         "clause": clause,
-                        "authority": authority
+                        "authority": authority,
+                        "inspection_interval_days": interval
                     })
                 elif ent.label == "FAILURE_MODE":
                     node_properties.update({
@@ -400,26 +403,29 @@ class KnowledgeGraphBuilder:
                         latest_inspection = latest_date.strftime("%Y-%m-%d")
                         days_since_inspection = (current_date - latest_date).days
                 
-                # Check for gap: no inspection or latest inspection > 365 days ago
-                has_gap = False
-                reason = ""
-                
-                if not latest_inspection:
-                    has_gap = True
-                    reason = "No recorded inspection history found"
-                elif days_since_inspection > 365:
-                    has_gap = True
-                    reason = f"Last inspection was {latest_inspection} ({days_since_inspection} days ago), exceeding the 365-day threshold"
+                # Check for gap PER regulation dynamically
+                for reg in governing_regs:
+                    reg_node = self.G.nodes[reg] if self.G.has_node(reg) else {}
+                    threshold = reg_node.get("inspection_interval_days", 365)
                     
-                if has_gap:
-                    for reg in governing_regs:
+                    has_gap = False
+                    reason = ""
+                    
+                    if not latest_inspection:
+                        has_gap = True
+                        reason = f"No recorded inspection history found (requires every {threshold} days)"
+                    elif days_since_inspection > threshold:
+                        has_gap = True
+                        reason = f"Last inspection was {latest_inspection} ({days_since_inspection} days ago), exceeding the dynamic {threshold}-day threshold for {reg}"
+                        
+                    if has_gap:
                         gaps.append({
                             "equipment_id": node,
                             "equipment_type": ndata.get("type", "Unknown"),
                             "regulation_id": reg,
-                            "authority": self.G.nodes[reg].get("authority", "Unknown") if reg in self.G.nodes else "Unknown",
+                            "authority": reg_node.get("authority", "Unknown"),
                             "last_inspection": latest_inspection or "Never",
-                            "days_overdue": (days_since_inspection - 365) if days_since_inspection else 9999,
+                            "days_overdue": (days_since_inspection - threshold) if days_since_inspection else 9999,
                             "reason": reason
                         })
                         
