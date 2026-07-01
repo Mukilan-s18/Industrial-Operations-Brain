@@ -47,8 +47,7 @@ def get_stats():
     return builder.get_graph_stats()
 
 @app.get("/api/compliance-gaps")
-def get_compliance_gaps(date: str = "2025-09-01", role: str = Query(None, description="User Role")):
-    # RBAC Enforcement: Operators cannot view compliance data
+def get_compliance_gaps(date: str = None, role: str = Query(None, description="User Role")):
     if role and "Operator" in role:
         return []
     return builder.get_compliance_gaps(date)
@@ -117,7 +116,6 @@ def get_graph_viz(node_id: str = Query(None, description="Ego network center nod
         
     # RBAC Enforcement: Filter Graph Nodes based on role
     if role and "Operator" in role:
-        # Operators should not see regulation or highly sensitive audit nodes
         restricted_nodes = [n for n, d in sub_g.nodes(data=True) if d.get("label") == "REGULATION"]
         sub_g.remove_nodes_from(restricted_nodes)
 
