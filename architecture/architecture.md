@@ -34,9 +34,9 @@ graph TD
         K -->|Role-Specific Views| U
     end
 
-    classDef db fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef processing fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef ui fill:#bfb,stroke:#333,stroke-width:2px;
+    classDef db fill:#f9f,stroke:#333,stroke-width:2px,color:#000;
+    classDef processing fill:#bbf,stroke:#333,stroke-width:2px,color:#000;
+    classDef ui fill:#bfb,stroke:#333,stroke-width:2px,color:#000;
 
     class G,H db;
     class D,E,F,I,J processing;
