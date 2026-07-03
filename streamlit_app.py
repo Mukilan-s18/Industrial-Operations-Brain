@@ -171,6 +171,16 @@ with st.sidebar:
     # Offline Mode Simulator
     st.subheader("System State")
     offline = st.toggle("Offline Mode Simulator", value=st.session_state.offline_mode)
+    
+    st.subheader("Demo Hardening")
+    use_fallback = st.toggle("Enable Fallback Mode (API Crash Recovery)", value=False)
+    
+    # Notify backend of fallback state change
+    try:
+        requests.post(f"http://127.0.0.1:8000/fallback/toggle?enabled={str(use_fallback).lower()}")
+    except:
+        pass
+
     st.session_state.offline_mode = offline
     
     if st.session_state.offline_mode:
@@ -293,6 +303,9 @@ with tab_chat:
                 with st.expander("Citations & Sources"):
                     for cite in msg["citations"]:
                         st.info(f"**Source:** {cite['source']} (Confidence: {cite['confidence']}%)\n\n{cite['text']}")
+            if not msg["is_user"] and msg.get("metrics"):
+                m = msg["metrics"]
+                st.caption(f"⏱️ Latency: {m.get('latency_sec', 0)}s | 🛡️ Faithfulness: {int(m.get('faithfulness_score', 0)*100)}% | 📚 Corpus Coverage: {m.get('corpus_coverage_pct', 0)}%")
 
     # Form handling input
     query = st.chat_input("Enter your operations query...")
@@ -315,78 +328,70 @@ with tab_chat:
         citations = []
         html_payload = ""
         
-        # Query Routing logic (Mock RAG + RBAC)
         q_lower = query.lower()
         
-        # Scenario 1: Operator checking torque limits
-        if "torque" in q_lower and "p-101" in q_lower and "spec" in q_lower:
-            response_text = "Target casing bolt tightening torque specifications for centrifugal pump **P-101** are documented as follows:"
-            
-            # Contradiction injection!
+        # Keep the RBAC block simulation for E-201
+        if ("e-201" in q_lower or "exchanger" in q_lower) and st.session_state.role == "Ravi (Operator)":
+            status = "ACCESS DENIED"
+            response_text = "**Access Denied**: Your current persona does not have clearance to view engineering inspection checklists."
             html_payload = """
-                <div class="contradiction-alert">
-                    <b>CONTRADICTION DETECTED IN INGESTED CORPUS</b><br>
-                    - <b>SOP-P-101-REV3 (2022)</b>: Specifies tightening torque of <b>50 Nm</b>.<br>
-                    - <b>SOP-P-101-REV4 (2024)</b>: Specifies revised tightening torque of <b>80 Nm</b>.<br>
-                    <i>Resolving Conflict: SOP-P-101-REV4 is currently flagged active and OISD compliant. Target torque: 80 Nm.</i>
+                <div style="background-color: #fef2f2; border: 1px solid #ef4444; color: #991b1b; padding: 12px; border-radius: 4px; font-size: 14px;">
+                    <b>RBAC Enforced:</b> Operators do not have read permission for static vessel inspection logs. Switch to Priya (Engineer) or Arjun (Auditor) to review static vessel status.
                 </div>
             """
-            citations = [
-                {"source": "sop_pump_p101_rev4.txt", "confidence": 98, "text": "Target casing bolt tightening torque is: 80 Nm (+/- 5%). Ensure all bolts are torqued in three progressive stages (30 Nm, 60 Nm, then final 80 Nm)."},
-                {"source": "sop_pump_p101_rev3.txt", "confidence": 92, "text": "Target casing bolt tightening torque is: 50 Nm (+/- 5%)."}
-            ]
-            
-        # Scenario 2: Performed torque work order query (Audit / Breach detection)
-        elif "work order" in q_lower or ("torque" in q_lower and "suresh" in q_lower) or ("torque" in q_lower and "p-101" in q_lower and "tightened" in q_lower):
-            response_text = "Retrieving operational logs from `work_orders_june2024.csv` for pump **P-101** bolt tightening job:"
-            
-            # Compliance gap alert injection
-            html_payload = """
-                <div class="compliance-alert">
-                    <b>REGULATORY COMPLIANCE BREACH (OISD-118-SEC-4.1)</b><br>
-                    - <b>Work Order:</b> WO-901 (2024-06-05)<br>
-                    - <b>Performed Torque:</b> 50 Nm by technician Suresh Kumar.<br>
-                    - <b>Requirement:</b> SOP-P-101-REV4 requires 80 Nm (+/- 5%, tolerance 76 - 84 Nm).<br>
-                    - <b>OISD Breach:</b> Casing torque of 50 Nm is below the 75 Nm safety threshold. Vapor leak risk flagged.
-                </div>
-            """
-            citations = [
-                {"source": "work_orders_june2024.csv", "confidence": 100, "text": "WO-901,P-101,2024-06-05,Seal Replacement & Bolt Tightening,50,Suresh Kumar,Closed,Re-assembled casing. Tightened casing bolts to 50 Nm as per SOP standard."},
-                {"source": "oisd_118_excerpt.txt", "confidence": 95, "text": "Under-tightening casing bolts (below 75 Nm) is flagged as a high-criticality regulatory breach of OISD safety standard due to pressure gasket release risks."}
-            ]
-            
-        # Scenario 3: Heat Exchanger E-201 check (RBAC block simulation)
-        elif "e-201" in q_lower or "exchanger" in q_lower:
-            if st.session_state.role == "Ravi (Operator)":
-                status = "ACCESS DENIED"
-                response_text = "**Access Denied**: Your current persona does not have clearance to view engineering inspection checklists."
-                html_payload = """
-                    <div style="background-color: #fef2f2; border: 1px solid #ef4444; color: #991b1b; padding: 12px; border-radius: 4px; font-size: 14px;">
-                        <b>RBAC Enforced:</b> Operators do not have read permission for static vessel inspection logs. Switch to Priya (Engineer) or Arjun (Auditor) to review static vessel status.
-                    </div>
-                """
-            else:
-                response_text = "Standard Operating Status for Heat Exchanger **E-201** retrieved from inspection records:"
-                citations = [
-                    {"source": "inspection_checklist_e201.txt", "confidence": 99, "text": "The static vessel E-201 is certified for continued operations... Shell thickness pass. Next hydrotesting and internal inspection scheduled for June 2029 (5-year cycle per PESO guidelines)."}
-                ]
-                html_payload = """
-                    <div style="margin-top: 10px; padding: 12px; background-color: #ecfdf5; border-left: 4px solid #10b981; color: #065f46; border-radius: 4px; font-size: 14px;">
-                        <b>Status: Compliant</b>. Integrity check completed on 18-June-2024. Next due: June 2029.
-                    </div>
-                """
-        
-        # General response fallback
         else:
-            response_text = f"This is a live mock response from the **Industrial Operations Brain**.\n\nAs a **{st.session_state.role}**, you queried: `\"{query}\"`.\n\nIn the final integrated backend, this query is routed through a LangGraph agent that reads from files you are authorized to access, searches vector spaces/graphs, performs verification checks, and outputs compliance analysis."
-            citations = []
+            # Call REAL LangGraph Backend
+            try:
+                # Update backend fallback state if toggled
+                if use_fallback:
+                    os.environ["USE_FALLBACK"] = "true"
+                else:
+                    os.environ["USE_FALLBACK"] = "false"
+                    
+                res = requests.post("http://127.0.0.1:8000/chat", json={"query": query})
+                
+                if res.status_code == 200:
+                    data = res.json()
+                    response_text = data.get("answer", "")
+                    
+                    # Convert backend metrics and contradictions into our UI elements
+                    if data.get("contradiction_detected"):
+                        html_payload = f"""
+                            <div class="contradiction-alert">
+                                <b>CONTRADICTION DETECTED IN INGESTED CORPUS</b><br>
+                                {data.get('contradiction_details', '')}
+                            </div>
+                        """
+                        
+                    # Format citations
+                    raw_sources = data.get("sources", [])
+                    citations = []
+                    for src in raw_sources:
+                        citations.append({
+                            "source": f"{src.get('doc', 'Unknown')} (Rev {src.get('revision', 'N/A')})",
+                            "confidence": int(src.get('score', 0) * 100),
+                            "text": "Extracted context match."
+                        })
+                        
+                    # Also append metrics payload to display if needed
+                    metrics = data.get("metrics", {})
+                    st.session_state.latest_metrics = metrics
+                    
+                else:
+                    response_text = f"Backend Error {res.status_code}: {res.text}"
+                    status = "ERROR"
+            except requests.exceptions.ConnectionError:
+                response_text = "Backend API is unreachable. Please ensure FastAPI is running on port 8000."
+                status = "ERROR"
+
             
         # Append response to history
         st.session_state.chat_history.append({
             "is_user": False,
             "text": response_text,
             "html_payload": html_payload,
-            "citations": citations
+            "citations": citations,
+            "metrics": st.session_state.get("latest_metrics", {})
         })
         
         # Log to audit trail
