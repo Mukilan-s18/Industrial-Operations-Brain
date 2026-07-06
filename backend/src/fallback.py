@@ -78,6 +78,8 @@ FALLBACK_RESPONSES = {
 }
 
 
-def get_fallback(query: str) -> dict | None:
+import typing
+
+def get_fallback(query: str) -> typing.Optional[dict]:
     """Look up a fallback response for the given query. Returns None if no fallback exists."""
     return FALLBACK_RESPONSES.get(query.lower().strip())
