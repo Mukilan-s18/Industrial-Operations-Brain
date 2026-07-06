@@ -1,5 +1,5 @@
 import pytest
-from src.ner_pipeline import NERPipeline
+from backend.src.ner_pipeline import NERPipeline
 
 @pytest.fixture(scope="module")
 def pipeline():

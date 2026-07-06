@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from app import app
+from backend.app import app
 import os
 import json
 
@@ -47,5 +47,5 @@ def test_graph_endpoints_available():
     response = client.get("/api/stats")
     assert response.status_code == 200
     data = response.json()
-    assert "nodes" in data
-    assert "edges" in data
+    assert "node_count" in data
+    assert "edge_count" in data

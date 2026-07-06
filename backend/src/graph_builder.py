@@ -6,7 +6,7 @@ import json
 import os
 import re
 from rapidfuzz import fuzz
-from src.schema import Equipment, Regulation, FailureMode, Parameter, Person, Document, GraphEdge
+from backend.src.schema import Equipment, Regulation, FailureMode, Parameter, Person, Document, GraphEdge
 
 
 class KnowledgeGraphBuilder:
@@ -15,7 +15,7 @@ class KnowledgeGraphBuilder:
         
         # Load config dynamically
         if config_path is None:
-            config_path = os.path.join(os.path.dirname(__file__), "..", "graph_config.yaml")
+            config_path = os.path.join(os.path.dirname(__file__), "..", "config", "graph_config.yaml")
             
         self.config = {}
         if os.path.exists(config_path):

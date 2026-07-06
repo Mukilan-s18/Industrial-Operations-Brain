@@ -1,6 +1,6 @@
 import pytest
-from src.ner_pipeline import NERPipeline
-from src.graph_builder import KnowledgeGraphBuilder
+from backend.src.ner_pipeline import NERPipeline
+from backend.src.graph_builder import KnowledgeGraphBuilder
 
 @pytest.fixture
 def mock_docs():

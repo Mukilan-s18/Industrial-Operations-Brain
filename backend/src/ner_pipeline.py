@@ -5,7 +5,7 @@ import spacy
 from spacy.pipeline import EntityRuler
 from rapidfuzz import fuzz
 from typing import List, Dict, Any, Tuple
-from src.schema import ExtractedEntity
+from backend.src.schema import ExtractedEntity
 
 class NERPipeline:
     def __init__(self, spacy_model: str = "en_core_web_sm", config_path: str = None):
@@ -13,7 +13,7 @@ class NERPipeline:
         
         # Load config dynamically
         if config_path is None:
-            config_path = os.path.join(os.path.dirname(__file__), "..", "graph_config.yaml")
+            config_path = os.path.join(os.path.dirname(__file__), "..", "config", "graph_config.yaml")
             
         self.config = {}
         if os.path.exists(config_path):
@@ -182,7 +182,7 @@ class NERPipeline:
         """
         import json
         if labeled_sentences_path is None:
-            labeled_sentences_path = os.path.join(os.path.dirname(__file__), "..", "data", "labeled_sentences.json")
+            labeled_sentences_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "labeled_sentences.json")
             
         if not os.path.exists(labeled_sentences_path):
             return {

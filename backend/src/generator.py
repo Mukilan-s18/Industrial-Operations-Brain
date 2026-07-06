@@ -5,7 +5,7 @@ and Faithfulness scoring.
 from dataclasses import dataclass, field
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core.schema import NodeWithScore
-from src.llm_utils import RateLimitedLLM
+from backend.src.llm_utils import RateLimitedLLM
 
 
 @dataclass

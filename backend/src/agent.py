@@ -14,9 +14,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.retriever import HybridGraphRetriever
-from src.generator import generate_answer, GenerationResult
-from src.llm_utils import RateLimitedLLM
+from backend.src.retriever import HybridGraphRetriever
+from backend.src.generator import generate_answer, GenerationResult
+from backend.src.llm_utils import RateLimitedLLM
 
 
 # Define State
@@ -87,13 +87,13 @@ Rewritten Query:"""
 
 
 def retrieve_work_orders(state: RCAState):
-    retriever = get_retriever(["work_orders"])
+    retriever = get_retriever(["work_orders"], state["graph_builder"], state["user_role"])
     nodes = retriever._retrieve(QueryBundle(state['query']))
     return {"work_orders_context": nodes, "status": "Searching past work orders..."}
 
 
 def retrieve_sops(state: RCAState):
-    retriever = get_retriever(["sops", "regulations"])
+    retriever = get_retriever(["sops", "regulations"], state["graph_builder"], state["user_role"])
     nodes = retriever._retrieve(QueryBundle(state['query']))
     return {"sops_context": nodes, "status": "Searching SOPs and regulations..."}
 
