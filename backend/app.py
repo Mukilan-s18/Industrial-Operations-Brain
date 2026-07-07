@@ -199,7 +199,9 @@ async def chat_endpoint(req: QueryRequest, x_user_role: str = Header(default="op
             "corpus_coverage_pct": CORPUS_COVERAGE_PCT
         },
         "cached": False,
-        "fallback": False
+        "fallback": False,
+        "action_taken": final_state.get("action_taken", "NONE"),
+        "action_result": final_state.get("action_result", "")
     }
 
     # Day 8: Store in dynamic cache for future instant retrieval
