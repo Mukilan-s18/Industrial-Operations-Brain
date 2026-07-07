@@ -9,6 +9,10 @@ echo "=========================================================="
 # Ensure PYTHONPATH includes the current directory
 export PYTHONPATH=.
 
+echo "Starting Live IoT/SCADA Simulator..."
+python backend/src/iot_simulator.py &
+IOT_PID=$!
+
 echo "Starting Unified FastAPI Backend (Graph + Chat + API)..."
 python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000 &
 BACKEND_PID=$!
@@ -22,3 +26,4 @@ python -m streamlit run frontend/app.py --server.headless true
 
 # Cleanup background process on exit
 kill $BACKEND_PID
+kill $IOT_PID
