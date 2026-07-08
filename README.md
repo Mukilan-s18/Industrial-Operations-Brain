@@ -18,9 +18,9 @@
 
 ## Overview
 
-**Industrial Operations Brain** is an enterprise-grade, agentic RAG (Retrieval-Augmented Generation) system purpose-built for heavy industry. It ingests complex industrial documents — SOPs, Work Orders, P&IDs, OEM Manuals, and regulatory standards (OISD, PESO) — and builds a semantic knowledge graph that powers role-aware, hallucination-resistant AI answers.
+**Industrial Operations Brain** is an enterprise grade, agentic RAG (Retrieval Augmented Generation) system purpose built for heavy industry. It ingests complex industrial documents - SOPs, Work Orders, P&IDs, OEM Manuals, and regulatory standards (OISD, PESO) and builds a semantic knowledge graph that powers role-aware, hallucination resistant AI answers.
 
-The system goes beyond simple Q&A: a multi-step **LangGraph agent** fuses live IoT sensor data, graph-traversal context, and vector search results before synthesising a final response — and can autonomously trigger actions such as raising SAP Work Orders.
+The system goes beyond simple Q&A: a multi-step **LangGraph agent** fuses live IoT sensor data, graph-traversal context, and vector search results before synthesising a final response and can autonomously trigger actions such as raising SAP Work Orders.
 
 ---
 
@@ -28,14 +28,14 @@ The system goes beyond simple Q&A: a multi-step **LangGraph agent** fuses live I
 
 | Feature | Details |
 |---|---|
-| 🔍 **Hybrid RAG** | Combines vector search (ChromaDB) with knowledge graph traversal (NetworkX / Neo4j) for grounded, citation-rich answers |
-| 🤖 **LangGraph Agentic Pipeline** | Multi-step reasoning agent with guardrails, query rewriting, live-sensor checks, and closed-loop action execution |
-| 📡 **Live IoT Integration** | Real-time sensor telemetry (temperature, vibration, pressure) fused into every agent reasoning step |
+| 🔍 **Hybrid RAG** | Combines vector search (ChromaDB) with knowledge graph traversal (NetworkX / Neo4j) for grounded, citation rich answers |
+| 🤖 **LangGraph Agentic Pipeline** | Multi step reasoning agent with guardrails, query rewriting, live sensor checks, and closed loop action execution |
+| 📡 **Live IoT Integration** | Real time sensor telemetry (temperature, vibration, pressure) fused into every agent reasoning step |
 | 🗺️ **Dynamic Knowledge Graph** | spaCy NER extracts Equipment, Regulations, Dates, and Standards from documents; entities linked via HAS_INSPECTION, GOVERNED_BY, and CAUSED_BY edges |
 | 🔐 **Full-Stack RBAC** | Role-Based Access Control enforced at the FastAPI backend and the Next.js UI — three personas (Operator, Engineer, Auditor) with distinct access scopes |
-| 📊 **Interactive Graph Visualisation** | Physics-based, real-time force-directed graph rendered client-side via `react-force-graph-2d` |
+| 📊 **Interactive Graph Visualisation** | Physics-based, real time force directed graph rendered client side via `react-force-graph-2d` |
 | 🎙️ **Voice & Vision Input** | Web Speech API for voice queries; Gemini Vision for image/P&ID analysis |
-| ⚡ **Server-Sent Events Streaming** | Token-by-token streaming of agent reasoning steps to the UI |
+| ⚡ **Server-Sent Events Streaming** | Token by token streaming of agent reasoning steps to the UI |
 | 🧪 **Full Test Coverage** | 103-test backend suite (`pytest`), unit tests (`jest`), E2E tests (`playwright`), and load tests (`locust`) |
 
 ---
@@ -90,7 +90,7 @@ graph TD
 
 - **Python** 3.9+
 - **Node.js** v18+
-- **Tesseract OCR** — for scanning scanned industrial PDFs
+- **Tesseract OCR** - for scanning scanned industrial PDFs
 
 ```bash
 # macOS
