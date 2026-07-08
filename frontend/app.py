@@ -24,14 +24,14 @@ class MockBuilder:
         try:
             return requests.get("http://127.0.0.1:8000/api/stats").json()
         except:
-            return {"nodes": 0, "edges": 0, "components": 0, "compliance_gaps": 0}
+            return {"node_count": 0, "edge_count": 0, "nodes_by_type": {}, "equipment_coverage_pct": 0.0}
 
 class MockNER:
     def evaluate_accuracy(self):
         try:
             return requests.get("http://127.0.0.1:8000/api/ner-evaluation").json()
         except:
-            return {"accuracy": 0, "f1_score": 0, "entities": []}
+            return {"accuracy": 0, "f1_score": 0, "precision": 0, "recall": 0, "details": []}
 
 def get_graph_viz(node_id=None, role=None):
     try:
