@@ -13,3 +13,4 @@ demo_docs/*.csv
 static/temp_graph_*.html
 *.db
 .vscode/
+iot_data.json
