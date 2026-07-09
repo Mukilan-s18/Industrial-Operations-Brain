@@ -12,7 +12,7 @@ import logging
 from typing import TypedDict, Any
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
-from llama_index.llms.gemini import Gemini
+from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core import QueryBundle
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from backend.settings import settings
@@ -58,8 +58,8 @@ def get_embed_model():
 
 
 def get_llm():
-    return Gemini(
-        model="models/gemini-2.5-flash-lite",
+    return GoogleGenAI(
+        model="gemini-2.5-flash",
         api_key=settings.google_api_key or os.getenv("GOOGLE_API_KEY"),
     )
 

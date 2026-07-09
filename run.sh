@@ -26,9 +26,12 @@ BACKEND_PID=$!
 echo "Waiting for backend to initialize..."
 sleep 5
 
-echo "Starting Streamlit Frontend..."
-python3 -m streamlit run frontend/app.py --server.headless true
+echo "Starting Next.js Frontend..."
+cd frontend-next
+npm run dev &
+FRONTEND_PID=$!
 
 # Cleanup background process on exit
-kill $BACKEND_PID
-kill $IOT_PID
+trap "kill $BACKEND_PID $IOT_PID $FRONTEND_PID" EXIT
+
+wait

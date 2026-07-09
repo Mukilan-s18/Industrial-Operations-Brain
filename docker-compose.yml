@@ -1,15 +1,25 @@
 version: '3.8'
 
 services:
-  app:
+  backend:
     build: .
-    container_name: industrial-copilot
+    container_name: industrial-copilot-backend
     ports:
       - "8000:8000"
-      - "8501:8501"
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     volumes:
       - ./data:/app/data
       - ./chroma_db:/app/chroma_db
     restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend-next
+      dockerfile: Dockerfile
+    container_name: industrial-copilot-frontend
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - backend

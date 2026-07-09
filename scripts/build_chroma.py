@@ -125,7 +125,7 @@ def query_index(query_text: str = "Your question here"):
     from llama_index.core import VectorStoreIndex
     from llama_index.vector_stores.chroma import ChromaVectorStore
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-    from llama_index.llms.gemini import Gemini
+    from llama_index.llms.google_genai import GoogleGenAI
     from llama_index.core import Settings
 
     # 1. Load embedding model
@@ -147,7 +147,7 @@ def query_index(query_text: str = "Your question here"):
 
     # 3. Set up Gemini LLM and query
     print(f"[3/3] Querying with Gemini ({LLM_MODEL_NAME})...")
-    llm = Gemini(model=LLM_MODEL_NAME, api_key=GOOGLE_API_KEY)
+    llm = GoogleGenAI(model=LLM_MODEL_NAME, api_key=GOOGLE_API_KEY)
     Settings.llm = llm
 
     query_engine = index.as_query_engine(llm=llm, similarity_top_k=3)

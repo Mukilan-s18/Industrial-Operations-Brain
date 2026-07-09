@@ -16,7 +16,18 @@ from backend.routers.chat import RESPONSE_CACHE
 
 logger = logging.getLogger(__name__)
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Industrial RAG API")
+
+# Add CORS Middleware to allow Next.js (port 3000) to communicate
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins for local dev
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Serve static files (HTML, CSS, JS)
 static_dir = settings.static_dir
@@ -43,7 +54,7 @@ async def get_metrics():
 
 @app.get("/")
 def read_root():
-    return FileResponse(os.path.join(static_dir, "index.html"))
+    return {"status": "API Online"}
 
 
 if __name__ == "__main__":

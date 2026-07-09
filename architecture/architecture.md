@@ -24,7 +24,7 @@ graph TD
     end
 
     subgraph Presentation & Security Layer
-        I -->|Live Compliance & PyVis Graph| K[Streamlit UI]
+        I -->|Live Compliance & API Routes| K[Next.js Dashboard]
         J -->|LLM Responses| K
         K -->|RBAC Filtering| K
     end

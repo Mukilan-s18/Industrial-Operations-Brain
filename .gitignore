@@ -17,3 +17,5 @@ iot_data.json
 chroma_db/
 data/documents.json
 .venv_test/
+frontend-next/.next/
+frontend-next/node_modules/

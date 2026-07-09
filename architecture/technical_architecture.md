@@ -14,7 +14,7 @@ graph TD
     B --> C[Fuzzy Entity Resolution & Alias Matching]
     C --> D[NetworkX Graph Construction & Temporal Rules]
     D --> E[FastAPI Web Server / Graph Analytics API]
-    E --> F[Interactive Glassmorphic UI Dashboard]
+    E --> F[Next.js Glassmorphic UI Dashboard]
     F --> G[Compliance Gaps & Failure Pattern Insights]
 ```
 

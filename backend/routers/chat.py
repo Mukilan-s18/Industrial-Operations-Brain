@@ -157,6 +157,9 @@ async def stream_rca(req: QueryRequest, x_user_role: str = Header(default="opera
                     )
                     event["sources"] = state_update.get("sources", [])
                     event["latency_sec"] = round(time.time() - start_time, 2)
+                if "action_taken" in state_update:
+                    event["action_taken"] = state_update["action_taken"]
+                    event["action_result"] = state_update.get("action_result", "")
                 yield f"data: {json.dumps(event)}\n\n"
             await asyncio.sleep(0.05)
 

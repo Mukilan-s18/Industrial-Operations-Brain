@@ -6,13 +6,15 @@ Wraps GoogleGenAI to handle 429 RESOURCE_EXHAUSTED errors gracefully.
 import time
 import re
 import sys
-from llama_index.llms.gemini import Gemini
+from llama_index.llms.google_genai import GoogleGenAI
 
 
 class RateLimitedLLM:
     """Wrapper around GoogleGenAI that retries on 429 rate limit errors."""
 
-    def __init__(self, llm: Gemini, max_retries: int = 5, pace_seconds: float = 1.0):
+    def __init__(
+        self, llm: GoogleGenAI, max_retries: int = 5, pace_seconds: float = 1.0
+    ):
         self.llm = llm
         self.max_retries = max_retries
         self.pace_seconds = pace_seconds

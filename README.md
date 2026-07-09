@@ -28,7 +28,7 @@ graph TD
     end
 
     subgraph Presentation & Security Layer
-        I -->|Live Compliance & PyVis Graph| K[Streamlit UI]
+        I -->|Live Compliance & API Routes| K[Next.js Dashboard]
         J -->|LLM Responses| K
         K -->|RBAC Filtering| K
     end
@@ -55,8 +55,9 @@ graph TD
 2. **Dynamic Knowledge Graph**: Uses configuration-driven rules (`graph_config.yaml`, `compliance_rules.yaml`) and fuzzy alias resolution to map relationships between Equipment, Documents, Regulations, and Maintenance Dates.
 3. **LangGraph Reasoning Agent**: An intelligent backend agent that coordinates between vector search (ChromaDB), graph queries, and LLM synthesis to ensure highly faithful and accurate responses while preventing hallucinations.
 4. **Real-time Metrics & Fallback Strategy**: Tracks RAG faithfulness scores, corpus coverage, and API latency. Features an emergency fallback toggle for live demos.
-5. **Full-stack Security & RBAC**: Implements Role-Based Access Control (RBAC) across both the Streamlit frontend and the FastAPI backend (`X-User-Role` headers). 
-6. **Interactive Visualization**: Explores the knowledge graph visually using an embedded PyVis dashboard inside Streamlit.
+5. **Full-stack Security & RBAC**: Implements Role-Based Access Control (RBAC) across both the Next.js frontend and the FastAPI backend (`X-User-Role` headers). 
+6. **Interactive Visualization**: Explores the knowledge graph visually using an embedded PyVis dashboard via an iframe inside Next.js.
+7. **Agentic Closed-Loop Actions**: The AI can execute automated actions (e.g. creating SAP Work Orders) based on equipment diagnosis.
 
 ---
 
@@ -64,12 +65,19 @@ graph TD
 
 ### Prerequisites
 - Python 3.9+
+- Node.js (v18+)
 - Tesseract OCR (`brew install tesseract` or `apt-get install tesseract-ocr`)
 
 ### 1. Install Dependencies
 ```bash
+# Backend dependencies
 pip install -r requirements.txt
 pip install -e .
+
+# Frontend dependencies
+cd frontend-next
+npm install
+cd ..
 ```
 
 ### 2. Generate Demo Corpus
@@ -78,19 +86,13 @@ Generate the synthetic dataset of 7 industrial documents (SOPs, Work Orders, OEM
 python scripts/generate_demo_docs.py
 ```
 
-### 3. Run the Backend API (FastAPI)
-The backend manages data ingestion, the knowledge graph, and the LangGraph agent:
+### 3. Run the Unified Application
+We use a single script to launch the FastAPI backend (port 8000), IoT Simulator, and the Next.js frontend (port 3000):
 ```bash
-python app.py
+./run.sh
 ```
+> The UI will be available at `http://localhost:3000`.
 > The API will be available at `http://localhost:8000`. Swagger UI is at `http://localhost:8000/docs`.
-
-### 4. Run the Frontend (Streamlit)
-Open a new terminal and run the interactive chat and dashboard UI:
-```bash
-streamlit run streamlit_app.py
-```
-> The UI will be available at `http://localhost:8501`.
 
 ---
 
@@ -125,16 +127,16 @@ The system supports 3 default personas. Queries triggering restricted terms (e.g
 ## 📂 Project Structure
 
 ```text
-├── app.py                     # Main FastAPI server and RAG pipeline endpoints
-├── streamlit_app.py           # Streamlit frontend with interactive UI & Chat
-├── src/                       
-│   ├── agent.py               # LangGraph Agent reasoning engine
-│   ├── graph_builder.py       # NetworkX Knowledge Graph and compliance logic
-│   └── llm_utils.py           # LLM configurations and prompts
+├── backend/
+│   ├── app.py                 # Main FastAPI server
+│   ├── routers/               # API routes (chat, graph, compliance)
+│   └── src/                   # Agent logic, retriever, graph builder
+├── frontend-next/             # Next.js UI
+│   ├── src/app                # Next.js Pages and routing
+│   └── src/components         # React Components (ChatInterface, KnowledgeGraph, LiveMetrics)
 ├── ingestion/                 # Multi-format document processing engine
 │   ├── main.py                # Ingestion API routes
-│   ├── processors/            # PDF, OCR, Excel, CSV processors
-│   └── utils/                 # Task managers, pipeline logic, chunking
+│   └── processors/            # PDF, OCR, Excel, CSV processors
 ├── data/                      # Output generated graphs and vector DBs
 ├── demo_docs/                 # Sample industrial documents
 └── scripts/                   # Utility scripts (e.g. data generation, tests)
@@ -145,8 +147,8 @@ The system supports 3 default personas. Queries triggering restricted terms (e.g
 ## 🛠️ Tech Stack
 
 - **Backend:** FastAPI, Python
-- **Frontend:** Streamlit, PyVis, Plotly
-- **AI/LLM:** LangChain, LangGraph, OpenAI / Gemini
+- **Frontend:** Next.js 14, Tailwind CSS, React
+- **AI/LLM:** LangChain, LangGraph, Google Gemini
 - **Vector DB:** ChromaDB
-- **Knowledge Graph:** NetworkX
+- **Knowledge Graph:** NetworkX, PyVis
 - **Document Processing:** PyMuPDF, Tesseract OCR, Pandas

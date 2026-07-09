@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  
+  --color-background: #050505;
+  --color-foreground: #E2E8F0;
+  
+  --color-primary: #3b82f6;
+  --color-primary-foreground: #ffffff;
+  
+  --color-card: rgba(255, 255, 255, 0.03);
+  --color-card-foreground: #f8fafc;
+  --color-card-border: rgba(255, 255, 255, 0.08);
+  
+  --color-muted: #1e293b;
+  --color-muted-foreground: #94a3b8;
+  
+  --color-accent: rgba(255, 255, 255, 0.05);
+  --color-accent-foreground: #ffffff;
+  
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-input: rgba(255, 255, 255, 0.05);
+}
+
+@layer base {
+  :root {
+    --background: #050505;
+    --foreground: #E2E8F0;
+  }
+  
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { 
+    width: 8px; 
+    height: 8px; 
+  }
+  ::-webkit-scrollbar-track { 
+    background: #050505; 
+  }
+  ::-webkit-scrollbar-thumb { 
+    background: #333; 
+    border-radius: 4px; 
+  }
+  ::-webkit-scrollbar-thumb:hover { 
+    background: #555; 
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-[var(--color-card)] backdrop-blur-md border border-[var(--color-card-border)] rounded-xl shadow-2xl;
+  }
+  .glass-panel {
+    @apply bg-black/40 backdrop-blur-lg border border-white/10;
+  }
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400;
+  }
+}
