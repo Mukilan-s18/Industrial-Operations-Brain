@@ -1,13 +1,12 @@
 """
 /ingest router: FastAPI endpoint for document ingestion.
 Handles PDF, Excel, and CSV/work-order files.
-Large files (>5MB or >50 pages) are processed asynchronously.
+Large files (>5MB or >50 pages) are processed asynchronously via Celery.
 """
 
 import json
 import logging
 import tempfile
-import threading
 import time
 from pathlib import Path
 
@@ -32,8 +31,7 @@ from ingestion.utils.metadata import (
 )
 from ingestion.utils.task_manager import (
     TaskStatus,
-    create_task,
-    get_task,
+    get_task_status,
     run_ingestion_async,
     should_process_async,
 )
@@ -85,9 +83,15 @@ async def ingest_document(request: Request, file: UploadFile = File(...)):
     warnings = []
     handed_off_to_async = False
 
-    # ── 1. Save to temp file ──────────────────────────────────────────────────
+    # ── 1. Save to shared temp file ───────────────────────────────────────────
+    # We save to data/tmp so it is shared across backend and celery-worker containers
     suffix = Path(file.filename).suffix.lower() if file.filename else ".bin"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+    tmp_dir = Path("data/tmp")
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(
+        dir=str(tmp_dir), delete=False, suffix=suffix
+    ) as tmp:
         content = await file.read()
         tmp.write(content)
         tmp_path = Path(tmp.name)
@@ -114,26 +118,19 @@ async def ingest_document(request: Request, file: UploadFile = File(...)):
 
         # ── 4. Large file → async ─────────────────────────────────────────────
         if should_process_async(tmp_path):
-            task_id = create_task(source=file.filename or "unknown")
             handed_off_to_async = True
-            # Hand off tmp_path ownership to the background thread
-            thread = threading.Thread(
-                target=run_ingestion_async,
-                args=(
-                    task_id,
-                    tmp_path,
-                    file.filename or "unknown",
-                    category,
-                    file_hash,
-                ),
-                daemon=True,
+            # Hand off tmp_path ownership to Celery worker
+            task = run_ingestion_async.delay(
+                str(tmp_path),
+                file.filename or "unknown",
+                category,
+                file_hash,
             )
-            thread.start()
-            # tmp_path will be cleaned up by run_ingestion_async
+            task_id = task.id
             return JSONResponse(
                 status_code=202,
                 content={
-                    "message": "Large file accepted for background processing",
+                    "message": "Large file accepted for background processing via Celery",
                     "task_id": task_id,
                     "status": TaskStatus.PENDING,
                     "poll_url": f"/ingest/status/{task_id}",
@@ -232,25 +229,8 @@ async def get_ingestion_status(task_id: str):
     - `result`: full IngestionResult JSON when status is `done`
     - `error`: error message when status is `failed`
     """
-    record = get_task(task_id)
-    if not record:
-        raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found")
-
-    response = {
-        "task_id": task_id,
-        "source": record.source,
-        "status": record.status,
-        "progress": record.progress,
-        "created_at": record.created_at,
-        "completed_at": record.completed_at,
-    }
-
-    if record.status == TaskStatus.DONE:
-        response["result"] = record.result
-    elif record.status == TaskStatus.FAILED:
-        response["error"] = record.error
-
-    return JSONResponse(content=response)
+    status_info = get_task_status(task_id)
+    return JSONResponse(content=status_info)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

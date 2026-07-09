@@ -19,3 +19,4 @@ data/documents.json
 .venv_test/
 frontend-next/.next/
 frontend-next/node_modules/
+venv/

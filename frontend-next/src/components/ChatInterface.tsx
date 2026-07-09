@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, AlertTriangle, CheckCircle, Database } from 'lucide-react';
-import axios from 'axios';
+import api, { fetchToken } from '@/lib/api';
 import { twMerge } from 'tailwind-merge';
 
 interface Message {
@@ -40,7 +40,8 @@ export default function ChatInterface({ activeRole }: { activeRole: string }) {
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:8000/chat", {
+      await fetchToken(activeRole);
+      const response = await api.post("/chat", {
         query: userMsg.content,
         role: activeRole,
       });

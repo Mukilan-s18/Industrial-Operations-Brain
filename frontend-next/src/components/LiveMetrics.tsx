@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api, { fetchToken } from '@/lib/api';
 import { Activity, Database, Zap, BookOpen } from 'lucide-react';
 
 interface Metrics {
@@ -17,7 +17,8 @@ export default function LiveMetrics() {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/metrics");
+        await fetchToken(activeRole);
+        const response = await api.get("/metrics");
         setMetrics(response.data);
       } catch (error) {
         console.error("Failed to fetch metrics", error);

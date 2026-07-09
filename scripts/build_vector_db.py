@@ -4,7 +4,7 @@ RAG Pipeline - Day 1: Basic RAG with LlamaIndex + ChromaDB + Gemini
 - Loads a text-based PDF directly using LlamaIndex's PDF reader
 - Chunks it with SentenceSplitter (fixed-size, sentence-aware)
 - Embeds chunks using BAAI/bge-small-en-v1.5 (local, no API needed)
-- Stores vectors in ChromaDB (persistent local storage)
+- Stores vectors in PostgreSQL with pgvector
 - Queries using Gemini 2.5 Flash Lite as the LLM
 
 Chunking Strategy: Fixed-size via SentenceSplitter
@@ -14,7 +14,7 @@ Chunking Strategy: Fixed-size via SentenceSplitter
   - Can upgrade to semantic chunking later if retrieval quality is poor
 
 Usage:
-    python main.py setup     # Load PDF, chunk, embed, store in ChromaDB
+    python main.py setup     # Load PDF, chunk, embed, store in Postgres
     python main.py query     # Run a test query against the indexed document
     python main.py both      # Do both setup + query (default)
 """
@@ -36,8 +36,8 @@ if not GOOGLE_API_KEY:
 
 # --- Configuration ---
 PDF_PATH = os.path.join("data", "demo.pdf")
-CHROMA_DB_PATH = "./chroma_db"
-CHROMA_COLLECTION_NAME = "rag_demo"
+POSTGRES_URI = os.getenv("POSTGRES_URI", "postgresql://postgres:postgres@localhost:5432/vectors")
+POSTGRES_TABLE = "rag_demo"
 CHUNK_SIZE = 1024
 CHUNK_OVERLAP = 200
 EMBED_MODEL_NAME = "BAAI/bge-small-en-v1.5"
@@ -45,17 +45,17 @@ LLM_MODEL_NAME = "models/gemini-2.5-flash-lite"
 
 
 # =====================================================================
-# STEP 3: ChromaDB + PDF Loading/Chunking
+# STEP 3: PostgreSQL PGVector + PDF Loading/Chunking
 # =====================================================================
 
 def setup_index():
-    """Load PDF, chunk it, embed, and store in ChromaDB."""
-    import chromadb
+    """Load PDF, chunk it, embed, and store in PGVectorStore."""
     from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext
     from llama_index.core.node_parser import SentenceSplitter
-    from llama_index.vector_stores.chroma import ChromaVectorStore
+    from llama_index.vector_stores.postgres import PGVectorStore
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
     from llama_index.core import Settings
+    from sqlalchemy import make_url
 
     # 1. Configure embedding model (local, no API key needed)
     print(f"\n[1/4] Loading embedding model: {EMBED_MODEL_NAME}")
@@ -87,19 +87,19 @@ def setup_index():
     if len(nodes) > 3:
         print(f"  -> ... and {len(nodes) - 3} more chunks")
 
-    # 4. Set up ChromaDB and store embeddings
-    print(f"\n[4/4] Setting up ChromaDB at: {CHROMA_DB_PATH}")
-    chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
-
-    # Delete existing collection if it exists (fresh start)
-    try:
-        chroma_client.delete_collection(CHROMA_COLLECTION_NAME)
-        print(f"  -> Cleared existing collection: {CHROMA_COLLECTION_NAME}")
-    except Exception:
-        pass
-
-    chroma_collection = chroma_client.get_or_create_collection(CHROMA_COLLECTION_NAME)
-    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+    # 4. Set up PGVectorStore and store embeddings
+    print(f"\n[4/4] Setting up Postgres at: {POSTGRES_URI}")
+    url = make_url(POSTGRES_URI.replace("+asyncpg", ""))
+    
+    vector_store = PGVectorStore.from_params(
+        database=url.database,
+        host=url.host,
+        password=url.password,
+        port=url.port,
+        user=url.username,
+        table_name=POSTGRES_TABLE,
+        embed_dim=384,
+    )
     storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
     print(f"  -> Embedding and indexing {len(nodes)} chunks (this may take a moment)...")
@@ -109,7 +109,7 @@ def setup_index():
         embed_model=embed_model,
     )
 
-    print(f"  -> Done! {chroma_collection.count()} vectors stored in ChromaDB")
+    print(f"  -> Done! Vectors stored in Postgres")
     print("\n[SETUP COMPLETE] Index is ready for queries.")
     return index
 
@@ -119,27 +119,33 @@ def setup_index():
 # =====================================================================
 
 def query_index(query_text: str = "Your question here"):
-    """Load the existing ChromaDB index and run a query."""
-    import chromadb
+    """Load the existing Postgres index and run a query."""
     import time
     from llama_index.core import VectorStoreIndex
-    from llama_index.vector_stores.chroma import ChromaVectorStore
+    from llama_index.vector_stores.postgres import PGVectorStore
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding
     from llama_index.llms.google_genai import GoogleGenAI
     from llama_index.core import Settings
+    from sqlalchemy import make_url
 
     # 1. Load embedding model
     print(f"\n[1/3] Loading embedding model: {EMBED_MODEL_NAME}")
     embed_model = HuggingFaceEmbedding(model_name=EMBED_MODEL_NAME)
     Settings.embed_model = embed_model
 
-    # 2. Connect to existing ChromaDB
-    print(f"[2/3] Connecting to ChromaDB at: {CHROMA_DB_PATH}")
-    chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
-    chroma_collection = chroma_client.get_collection(CHROMA_COLLECTION_NAME)
-    print(f"  -> Found {chroma_collection.count()} vectors in collection")
-
-    vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
+    # 2. Connect to existing Postgres
+    print(f"[2/3] Connecting to Postgres at: {POSTGRES_URI}")
+    url = make_url(POSTGRES_URI.replace("+asyncpg", ""))
+    
+    vector_store = PGVectorStore.from_params(
+        database=url.database,
+        host=url.host,
+        password=url.password,
+        port=url.port,
+        user=url.username,
+        table_name=POSTGRES_TABLE,
+        embed_dim=384,
+    )
     index = VectorStoreIndex.from_vector_store(
         vector_store,
         embed_model=embed_model,
@@ -223,7 +229,7 @@ if __name__ == "__main__":
         query_index()
     else:
         print("Usage: python main.py [setup|query|ask|chat|both]")
-        print("  setup  - Load PDF, chunk, embed, store in ChromaDB")
+        print("  setup  - Load PDF, chunk, embed, store in Postgres")
         print("  query  - Run the default test query")
         print('  ask    - Ask a question:  python main.py ask "Your question"')
         print("  chat   - Interactive mode: ask multiple questions")

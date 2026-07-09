@@ -2,29 +2,29 @@
 Day 3, 4 & 10: Custom Retriever with Hybrid Search (Graph + Vector), Abstention, and RBAC
 """
 
-import chromadb
 import re
 from typing import List
 
 from llama_index.core import VectorStoreIndex, QueryBundle
 from llama_index.core.retrievers import BaseRetriever
 from llama_index.core.schema import NodeWithScore, Document
-from llama_index.vector_stores.chroma import ChromaVectorStore
+from llama_index.vector_stores.postgres import PGVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from sqlalchemy import make_url
+from backend.settings import settings
 
 
 class HybridGraphRetriever(BaseRetriever):
     def __init__(
         self,
-        chroma_db_path: str,
         collection_names: List[str],
         embed_model: HuggingFaceEmbedding,
         builder=None,
         role: str = "operator",
         similarity_top_k: int = 3,
-        abstention_distance_threshold: float = 0.8,  # If distance > 0.8, abstain
+        abstention_distance_threshold: float = 0.8,
     ):
-        self.chroma_client = chromadb.PersistentClient(path=chroma_db_path)
+        self.url = make_url(settings.postgres_uri)
         self.collection_names = collection_names
         self.embed_model = embed_model
         self.similarity_top_k = similarity_top_k
@@ -40,10 +40,15 @@ class HybridGraphRetriever(BaseRetriever):
         all_vector_nodes = []
         for coll_name in self.collection_names:
             try:
-                collection = self.chroma_client.get_collection(coll_name)
-                if collection.count() == 0:
-                    continue
-                vector_store = ChromaVectorStore(chroma_collection=collection)
+                vector_store = PGVectorStore.from_params(
+                    database=self.url.database,
+                    host=self.url.host,
+                    password=self.url.password,
+                    port=self.url.port,
+                    user=self.url.username,
+                    table_name=coll_name,
+                    embed_dim=384,
+                )
                 index = VectorStoreIndex.from_vector_store(
                     vector_store, embed_model=self.embed_model
                 )

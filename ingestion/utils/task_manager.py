@@ -1,16 +1,14 @@
 """
-Async Task Manager: Handles background ingestion for large files.
+Async Task Manager: Handles background ingestion for large files via Celery.
 Files > 5MB or > 50 pages are processed asynchronously.
 Returns a task_id immediately; poll /ingest/status/{task_id} for results.
 """
 
 import logging
-import threading
 import time
-import uuid
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional
+from backend.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
@@ -26,63 +24,13 @@ class TaskStatus(str, Enum):
     FAILED = "failed"
 
 
-class TaskRecord:
-    def __init__(self, task_id: str, source: str):
-        self.task_id = task_id
-        self.source = source
-        self.status = TaskStatus.PENDING
-        self.result: Optional[Any] = None
-        self.error: Optional[str] = None
-        self.created_at = time.time()
-        self.completed_at: Optional[float] = None
-        self.progress: str = "Queued"
-
-
-# In-memory task registry
-_tasks: Dict[str, TaskRecord] = {}
-_lock = threading.Lock()
-
-
-def _evict_old_tasks():
-    """Evict DONE or FAILED tasks older than 1 hour (3600 seconds)."""
-    now = time.time()
-    to_delete = []
-    with _lock:
-        for task_id, record in _tasks.items():
-            if (
-                record.status in (TaskStatus.DONE, TaskStatus.FAILED)
-                and record.completed_at
-            ):
-                if now - record.completed_at > 3600:
-                    to_delete.append(task_id)
-        for task_id in to_delete:
-            del _tasks[task_id]
-
-
-def create_task(source: str) -> str:
-    """Create a new async task and return its task_id."""
-    _evict_old_tasks()
-    task_id = str(uuid.uuid4())
-    record = TaskRecord(task_id=task_id, source=source)
-    with _lock:
-        _tasks[task_id] = record
-    logger.info(f"Task created: {task_id} for '{source}'")
-    return task_id
-
-
-def get_task(task_id: str) -> Optional[TaskRecord]:
-    """Retrieve a task record by ID."""
-    _evict_old_tasks()
-    with _lock:
-        return _tasks.get(task_id)
-
-
+@celery_app.task(bind=True, name="run_ingestion_async")
 def run_ingestion_async(
-    task_id: str, tmp_path: Path, filename: str, category: str, file_hash: str
+    self, tmp_path_str: str, filename: str, category: str, file_hash: str
 ):
     """
-    Run full ingestion in a background thread.
-    Updates the TaskRecord in-place as processing proceeds.
+    Run full ingestion in a Celery background task.
+    Updates the task state in-place as processing proceeds.
     """
     from ingestion.utils.pipeline import run_extraction_pipeline
     from ingestion.utils.deduplication import register_document
@@ -97,26 +45,19 @@ def run_ingestion_async(
         IngestionResult,
     )
 
-    record = get_task(task_id)
-    if not record:
-        return
-
-    with _lock:
-        record.status = TaskStatus.RUNNING
-        record.progress = "Processing started"
-
+    tmp_path = Path(tmp_path_str)
     start_time = time.perf_counter()
     warnings = []
 
     try:
-        with _lock:
-            record.progress = f"Extracting {category}..."
+        self.update_state(
+            state="RUNNING", meta={"progress": f"Extracting {category}..."}
+        )
 
         pages, doc_type, pipe_warnings = run_extraction_pipeline(tmp_path, category)
         warnings.extend(pipe_warnings)
 
-        with _lock:
-            record.progress = "Extracting metadata..."
+        self.update_state(state="RUNNING", meta={"progress": "Extracting metadata..."})
 
         first_pages_text = " ".join(p.text for p in pages[:3])
         full_text = " ".join(p.text for p in pages)
@@ -125,7 +66,7 @@ def run_ingestion_async(
             rev_number=extract_revision(first_pages_text),
             date=extract_date(first_pages_text),
             equipment_ids=extract_equipment_ids(full_text),
-            language=detect_language(full_text)[0],
+            language=detect_language(full_text)[0] if full_text else "en",
             requires_manual_review=any(getattr(p, "error", None) for p in pages),
         )
 
@@ -142,28 +83,60 @@ def run_ingestion_async(
         )
         register_document(file_hash, file_hash, filename)
 
-        with _lock:
-            record.status = TaskStatus.DONE
-            record.result = result.model_dump()
-            record.completed_at = time.time()
-            record.progress = (
-                f"Done — {len(pages)} pages processed in {elapsed_ms:.0f}ms"
-            )
+        logger.info(f"Task completed: {filename} ({elapsed_ms:.0f}ms)")
 
-        logger.info(f"Task {task_id} completed: {filename} ({elapsed_ms:.0f}ms)")
+        # Return the actual result dict to store in Redis
+        return {
+            "result": result.model_dump(),
+            "progress": f"Done — {len(pages)} pages processed in {elapsed_ms:.0f}ms",
+            "source": filename,
+        }
 
     except Exception as e:
-        logger.error(f"Task {task_id} failed: {e}")
-        with _lock:
-            record.status = TaskStatus.FAILED
-            record.error = str(e)
-            record.completed_at = time.time()
-            record.progress = f"Failed: {e}"
+        logger.error(f"Task failed: {e}")
+        # Raising an exception will make the task FAILED in celery
+        raise e
     finally:
         try:
-            tmp_path.unlink(missing_ok=True)
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
         except Exception:
             pass
+
+
+def get_task_status(task_id: str) -> dict:
+    from celery.result import AsyncResult
+
+    res = AsyncResult(task_id, app=celery_app)
+
+    status = TaskStatus.PENDING
+    progress = "Queued"
+    result = None
+    error = None
+
+    if res.state == "PENDING":
+        status = TaskStatus.PENDING
+    elif res.state in ("STARTED", "RUNNING"):
+        status = TaskStatus.RUNNING
+        if isinstance(res.info, dict):
+            progress = res.info.get("progress", progress)
+    elif res.state == "SUCCESS":
+        status = TaskStatus.DONE
+        if isinstance(res.info, dict):
+            result = res.info.get("result")
+            progress = res.info.get("progress", "Done")
+    elif res.state == "FAILURE":
+        status = TaskStatus.FAILED
+        error = str(res.info)
+        progress = f"Failed: {error}"
+
+    return {
+        "task_id": task_id,
+        "status": status,
+        "progress": progress,
+        "result": result,
+        "error": error,
+    }
 
 
 def should_process_async(file_path: Path) -> bool:

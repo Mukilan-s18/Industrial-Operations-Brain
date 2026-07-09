@@ -11,9 +11,11 @@ llama-index
 llama-index-core
 llama-index-embeddings-huggingface
 llama-index-llms-gemini
-llama-index-vector-stores-chroma
-chromadb==1.5.9
-
+llama-index-vector-stores-postgres
+psycopg2-binary
+asyncpg
+sqlalchemy
+redis
 # Knowledge Graph & NLP
 networkx>=3.0.0
 pyvis>=0.3.0
@@ -47,3 +49,28 @@ requests>=2.31.0
 
 # Linting & Formatting
 ruff>=0.4.0
+
+# Task Queue (Background Ingestion)
+celery>=5.4.0
+redis>=5.0.4
+
+# Security & Authentication (JWT)
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Neo4j Database
+neo4j>=5.21.0
+
+# Observability
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+opentelemetry-exporter-otlp
+structlog
+
+# Final Polish (S3, Rate Limiting, OIDC, LLM Observability)
+slowapi
+boto3
+arize-phoenix==4.29.0
+llama-index-callbacks-arize-phoenix
+requests

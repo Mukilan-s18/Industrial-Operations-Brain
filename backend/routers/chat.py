@@ -1,23 +1,39 @@
 import time
 import json
 import asyncio
-from fastapi import APIRouter, Header, HTTPException
+import uuid
+from fastapi import APIRouter, Header, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
+
 from backend.settings import settings
 from backend.src.fallback import get_fallback
-from backend.dependencies import rca_graph, builder, CORPUS_COVERAGE_PCT
+import redis.asyncio as redis
+from backend.dependencies import (
+    rca_graph,
+    builder,
+    CORPUS_COVERAGE_PCT,
+    get_current_user,
+)
 
 router = APIRouter()
 
-# Dynamic Response Cache
-RESPONSE_CACHE: dict[str, dict] = {}
+# Distributed Response Cache
+redis_client = redis.from_url(settings.redis_uri, decode_responses=True)
 
 
 class QueryRequest(BaseModel):
     query: str
     mode: str = "detailed"
+
+
+class ActionRequest(BaseModel):
+    thread_id: str
 
 
 OPERATOR_RESTRICTED_TERMS = [
@@ -46,9 +62,11 @@ def check_role_access(role: str, query: str) -> tuple[bool, str]:
 
 
 @router.post("/chat")
+@limiter.limit("10/minute")
 async def chat_endpoint(
-    req: QueryRequest, x_user_role: str = Header(default="operator")
+    request: Request, req: QueryRequest, current_user: dict = Depends(get_current_user)
 ):
+    x_user_role = current_user["role"]
     start_time = time.time()
     query_lower = req.query.lower().strip()
 
@@ -72,8 +90,9 @@ async def chat_endpoint(
                 "fallback": True,
             }
 
-    if query_lower in RESPONSE_CACHE:
-        cached = RESPONSE_CACHE[query_lower]
+    cached_str = await redis_client.get(f"chat_cache:{query_lower}")
+    if cached_str:
+        cached = json.loads(cached_str)
         return {
             **cached,
             "metrics": {
@@ -93,8 +112,15 @@ async def chat_endpoint(
 
     # Asynchronous invocation for high concurrency support
     # We must pass the config to LangGraph for memory saving (thread_id)
-    config = {"configurable": {"thread_id": "thread-1"}}
+    thread_id = f"thread-{uuid.uuid4().hex[:8]}"
+    config = {"configurable": {"thread_id": thread_id}}
     final_state = await rca_graph.ainvoke(inputs, config=config)
+
+    # Check if graph paused for HITL approval
+    state_snapshot = rca_graph.get_state(config)
+    requires_approval = (
+        len(state_snapshot.next) > 0 and "execute_action" in state_snapshot.next
+    )
 
     latency = round(time.time() - start_time, 2)
 
@@ -111,11 +137,21 @@ async def chat_endpoint(
         },
         "cached": False,
         "fallback": False,
-        "action_taken": final_state.get("action_taken", "NONE"),
-        "action_result": final_state.get("action_result", ""),
+        "action_taken": "PENDING_APPROVAL"
+        if requires_approval
+        else final_state.get("action_taken", "NONE"),
+        "action_result": "Requires user approval to execute SAP transaction."
+        if requires_approval
+        else final_state.get("action_result", ""),
+        "requires_approval": requires_approval,
+        "thread_id": thread_id if requires_approval else None,
     }
 
-    RESPONSE_CACHE[query_lower] = response_data
+    await redis_client.setex(
+        f"chat_cache:{query_lower}",
+        3600,  # Cache for 1 hour
+        json.dumps(response_data),
+    )
     return response_data
 
 
@@ -125,8 +161,55 @@ async def toggle_fallback(enabled: bool):
     return {"fallback_mode": settings.use_fallback}
 
 
+@router.post("/action/approve")
+async def approve_action(
+    req: ActionRequest, current_user: dict = Depends(get_current_user)
+):
+    """HITL: Resumes LangGraph execution to create the SAP Work Order."""
+    config = {"configurable": {"thread_id": req.thread_id}}
+    state_snapshot = rca_graph.get_state(config)
+
+    if not state_snapshot.next:
+        raise HTTPException(
+            status_code=400, detail="No pending actions for this thread."
+        )
+
+    final_state = await rca_graph.ainvoke(None, config=config)
+    return {
+        "status": "Approved",
+        "action_taken": final_state.get("action_taken"),
+        "action_result": final_state.get("action_result"),
+    }
+
+
+@router.post("/action/reject")
+async def reject_action(
+    req: ActionRequest, current_user: dict = Depends(get_current_user)
+):
+    """HITL: Cancels the pending SAP action."""
+    config = {"configurable": {"thread_id": req.thread_id}}
+    state_snapshot = rca_graph.get_state(config)
+
+    if not state_snapshot.next:
+        raise HTTPException(
+            status_code=400, detail="No pending actions for this thread."
+        )
+
+    # We update the state to bypass the action
+    rca_graph.update_state(
+        config,
+        {"action_taken": "REJECTED", "action_result": "User rejected the action."},
+    )
+
+    return {"status": "Rejected", "message": "The pending SAP Work Order was canceled."}
+
+
 @router.post("/stream")
-async def stream_rca(req: QueryRequest, x_user_role: str = Header(default="operator")):
+@limiter.limit("10/minute")
+async def stream_rca(
+    request: Request, req: QueryRequest, current_user: dict = Depends(get_current_user)
+):
+    x_user_role = current_user["role"]
     allowed, reason = check_role_access(x_user_role, req.query)
     if not allowed:
         raise HTTPException(status_code=403, detail=reason)
@@ -168,5 +251,7 @@ async def stream_rca(req: QueryRequest, x_user_role: str = Header(default="opera
 
 @router.post("/cache/clear")
 async def clear_cache():
-    RESPONSE_CACHE.clear()
+    # Only clear chat cache keys to avoid affecting celery tasks
+    async for key in redis_client.scan_iter("chat_cache:*"):
+        await redis_client.delete(key)
     return {"status": "Cache cleared"}
