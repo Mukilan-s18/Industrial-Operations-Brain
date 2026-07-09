@@ -3,24 +3,26 @@ Day 5: LangGraph RCA Agent
 Orchestrates multi-step reasoning: Query Rewriting -> Retrieve Work Orders -> Retrieve SOPs -> Synthesize
 Returns structured results with real metrics.
 """
+
 import os
 import time
-from typing import TypedDict
+import json
+import sqlite3
+import logging
+from typing import TypedDict, Any
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
 from llama_index.llms.gemini import Gemini
 from llama_index.core import QueryBundle
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from dotenv import load_dotenv
+from backend.settings import settings
 
-load_dotenv()
+logger = logging.getLogger(__name__)
 
 from backend.src.retriever import HybridGraphRetriever
 from backend.src.generator import generate_answer, GenerationResult
 from backend.src.llm_utils import RateLimitedLLM
 
-
-# Define State
-from typing import Any
 
 class RCAState(TypedDict):
     query: str
@@ -45,7 +47,7 @@ class RCAState(TypedDict):
 
 # Singleton-style caching for expensive objects
 _embed_model = None
-_chroma_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "chroma_db"))
+_chroma_path = settings.chroma_db_path
 
 
 def get_embed_model():
@@ -56,7 +58,10 @@ def get_embed_model():
 
 
 def get_llm():
-    return Gemini(model="models/gemini-2.5-flash-lite", api_key=os.getenv("GOOGLE_API_KEY"))
+    return Gemini(
+        model="models/gemini-2.5-flash-lite",
+        api_key=settings.google_api_key or os.getenv("GOOGLE_API_KEY"),
+    )
 
 
 def get_retriever(collections: list[str], builder: Any, role: str):
@@ -65,11 +70,12 @@ def get_retriever(collections: list[str], builder: Any, role: str):
         collection_names=collections,
         embed_model=get_embed_model(),
         builder=builder,
-        role=role
+        role=role,
     )
 
 
 # --- Nodes ---
+
 
 def rewrite_query(state: RCAState):
     """Day 7: Query Rewriting for informal language."""
@@ -80,56 +86,65 @@ Known equipment tags: [P-101, HV-204, HV-205]
 If the query already uses explicit tags, return it unchanged.
 Return ONLY the rewritten query, nothing else.
 
-Original Query: {state['original_query']}
+Original Query: {state["original_query"]}
 Rewritten Query:"""
     response = safe_llm.complete(prompt)
     rewritten = str(response).strip()
     # Fallback: if LLM returns empty or garbage, use original
     if len(rewritten) < 3:
-        rewritten = state['original_query']
+        rewritten = state["original_query"]
     return {"query": rewritten, "status": f"Rewrote query to: {rewritten}"}
 
 
 def check_live_sensors(state: RCAState):
     """Phase 4: Read live SCADA IoT simulation data."""
-    import json
-    iot_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "iot_data.json"))
+    iot_path = settings.iot_path
     context = ""
     try:
         if os.path.exists(iot_path):
             with open(iot_path, "r") as f:
                 data = json.load(f)
             context = json.dumps(data.get("equipment", {}))
-    except Exception:
-        pass
-    
-    return {"live_sensor_context": f"LIVE SCADA METRICS (Vibration & Temp): {context}", "status": "Reading live SCADA sensors..."}
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.error(f"Error reading IoT data: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error in check_live_sensors: {e}")
+
+    return {
+        "live_sensor_context": f"LIVE SCADA METRICS (Vibration & Temp): {context}",
+        "status": "Reading live SCADA sensors...",
+    }
 
 
 def retrieve_work_orders(state: RCAState):
-    retriever = get_retriever(["work_orders"], state["graph_builder"], state["user_role"])
-    nodes = retriever._retrieve(QueryBundle(state['query']))
+    retriever = get_retriever(
+        ["work_orders"], state["graph_builder"], state["user_role"]
+    )
+    nodes = retriever._retrieve(QueryBundle(state["query"]))
     return {"work_orders_context": nodes, "status": "Searching past work orders..."}
 
 
 def retrieve_sops(state: RCAState):
-    retriever = get_retriever(["sops", "regulations"], state["graph_builder"], state["user_role"])
-    nodes = retriever._retrieve(QueryBundle(state['query']))
+    retriever = get_retriever(
+        ["sops", "regulations"], state["graph_builder"], state["user_role"]
+    )
+    nodes = retriever._retrieve(QueryBundle(state["query"]))
     return {"sops_context": nodes, "status": "Searching SOPs and regulations..."}
 
 
 def synthesize(state: RCAState):
     from llama_index.core.schema import NodeWithScore, TextNode
+
     llm = get_llm()
-    all_nodes = state.get('work_orders_context', []) + state.get('sops_context', [])
-    
+    all_nodes = state.get("work_orders_context", []) + state.get("sops_context", [])
+
     # Inject live sensor data into context for the LLM
     live_ctx = state.get("live_sensor_context", "")
     if live_ctx:
         mock_node = TextNode(text=live_ctx, metadata={"source": "LIVE_SCADA_SENSORS"})
         all_nodes.append(NodeWithScore(node=mock_node, score=1.0))
-        
-    result: GenerationResult = generate_answer(state['query'], all_nodes, llm)
+
+    result: GenerationResult = generate_answer(state["query"], all_nodes, llm)
     return {
         "final_answer": result.answer,
         "contradiction_detected": result.contradiction_detected,
@@ -137,7 +152,7 @@ def synthesize(state: RCAState):
         "sources": result.sources,
         "faithfulness_score": result.faithfulness_score,
         "abstained": result.abstained,
-        "status": "Synthesized final RCA."
+        "status": "Synthesized final RCA.",
     }
 
 
@@ -145,26 +160,40 @@ def execute_action(state: RCAState):
     """Day 8: Closed-Loop Agentic Action Execution (SAP Mock)"""
     ans = state.get("final_answer", "").lower()
     # If the LLM synthesis recommends creating a work order or detects a critical failure, take action!
-    if "work order" in ans and ("create" in ans or "critical" in ans or "recommend" in ans or "draft" in ans):
+    if "work order" in ans and (
+        "create" in ans or "critical" in ans or "recommend" in ans or "draft" in ans
+    ):
         mock_id = f"SAP-WO-{int(time.time())}"
-        import sqlite3
-        db_path = os.path.join(os.path.dirname(__file__), "..", "..", "mock_sap.db")
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        c.execute("CREATE TABLE IF NOT EXISTS work_orders (id TEXT, description TEXT)")
-        c.execute("INSERT INTO work_orders VALUES (?, ?)", (mock_id, f"Agentic Generated based on query: {state['query']}"))
-        conn.commit()
-        conn.close()
-        
+        try:
+            db_path = os.path.join(os.path.dirname(__file__), "..", "..", "mock_sap.db")
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute(
+                "CREATE TABLE IF NOT EXISTS work_orders (id TEXT, description TEXT)"
+            )
+            c.execute(
+                "INSERT INTO work_orders VALUES (?, ?)",
+                (mock_id, f"Agentic Generated based on query: {state['query']}"),
+            )
+            conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            logger.error(f"Database error executing action: {e}")
+            return {
+                "action_taken": "CREATE_SAP_WO_FAILED",
+                "action_result": f"Failed to create Work Order {mock_id} in SAP due to DB error.",
+                "status": f"Agent failed to execute action: {e}",
+            }
+
         return {
             "action_taken": "CREATE_SAP_WO",
             "action_result": f"Successfully created Work Order {mock_id} in SAP.",
-            "status": f"Agent executed action: Created Work Order {mock_id}"
+            "status": f"Agent executed action: Created Work Order {mock_id}",
         }
     return {
         "action_taken": "NONE",
         "action_result": "",
-        "status": "No action required."
+        "status": "No action required.",
     }
 
 
@@ -187,7 +216,8 @@ def build_rca_graph():
     workflow.add_edge("synthesize", "execute_action")
     workflow.add_edge("execute_action", END)
 
-    return workflow.compile()
+    memory = MemorySaver()
+    return workflow.compile(checkpointer=memory)
 
 
 # Example runner

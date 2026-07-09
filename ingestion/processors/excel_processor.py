@@ -5,7 +5,7 @@ Handles merged cells, empty rows/columns, and industrial formatting quirks.
 
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 import pandas as pd
 
@@ -73,20 +73,24 @@ def extract_excel(file_path: Path) -> List[PageResult]:
                 rows=all_rows,
             )
 
-            pages.append(PageResult(
-                page=sheet_idx + 1,
-                text=f"Sheet: {sheet_name}\n\n" + _df_to_markdown(df),
-                is_ocr=False,
-                tables=[table],
-            ))
+            pages.append(
+                PageResult(
+                    page=sheet_idx + 1,
+                    text=f"Sheet: {sheet_name}\n\n" + _df_to_markdown(df),
+                    is_ocr=False,
+                    tables=[table],
+                )
+            )
 
         except Exception as e:
             logger.warning(f"Error processing sheet '{sheet_name}': {e}")
-            pages.append(PageResult(
-                page=sheet_idx + 1,
-                text="",
-                is_ocr=False,
-                error=str(e),
-            ))
+            pages.append(
+                PageResult(
+                    page=sheet_idx + 1,
+                    text="",
+                    is_ocr=False,
+                    error=str(e),
+                )
+            )
 
     return pages

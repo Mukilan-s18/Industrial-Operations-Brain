@@ -30,6 +30,11 @@ jobs:
         pip install -r requirements.txt
         python -m spacy download en_core_web_sm
         
-    - name: Run Tests
+    - name: Lint and Format Check (Ruff)
       run: |
-        pytest tests/
+        ruff check .
+        ruff format --check .
+
+    - name: Run Tests with Coverage
+      run: |
+        python -m pytest tests/ --cov=backend --cov-fail-under=60

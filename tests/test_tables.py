@@ -1,10 +1,8 @@
 """Tests for table extraction utilities."""
 
 import sys
-import tempfile
 from pathlib import Path
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -45,7 +43,7 @@ def test_language_detection_english():
 
 def test_language_detection_hindi():
     """Text with Devanagari characters should be flagged."""
-    from ingestion.utils.language import detect_language, flag_mixed_language
+    from ingestion.utils.language import flag_mixed_language
 
     # Mix of English and Hindi characters
     hindi_text = "पंप P-101 की जांच करें। Inspect valve P-101."

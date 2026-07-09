@@ -4,7 +4,6 @@ Pre-processes images with OpenCV for better accuracy on industrial docs.
 """
 
 import logging
-import os
 from io import BytesIO
 from typing import Optional
 import concurrent.futures
@@ -54,8 +53,11 @@ def _preprocess_image(pil_image: Image.Image) -> Image.Image:
                 center = (w // 2, h // 2)
                 M = cv2.getRotationMatrix2D(center, angle, 1.0)
                 gray = cv2.warpAffine(
-                    gray, M, (w, h), flags=cv2.INTER_CUBIC,
-                    borderMode=cv2.BORDER_REPLICATE
+                    gray,
+                    M,
+                    (w, h),
+                    flags=cv2.INTER_CUBIC,
+                    borderMode=cv2.BORDER_REPLICATE,
                 )
         except Exception:
             pass  # Skip deskew on failure
@@ -63,8 +65,7 @@ def _preprocess_image(pil_image: Image.Image) -> Image.Image:
     # Adaptive thresholding for low-contrast scans
     denoised = cv2.fastNlMeansDenoising(gray, h=10)
     thresh = cv2.adaptiveThreshold(
-        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 11, 2
+        denoised, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
     )
 
     return Image.fromarray(thresh)
@@ -73,8 +74,7 @@ def _preprocess_image(pil_image: Image.Image) -> Image.Image:
 def _get_tesseract_confidence(data: dict) -> float:
     """Calculate mean confidence from Tesseract output data."""
     confidences = [
-        float(c) for c in data.get("conf", [])
-        if str(c).strip() not in ("-1", "")
+        float(c) for c in data.get("conf", []) if str(c).strip() not in ("-1", "")
     ]
     return sum(confidences) / len(confidences) if confidences else 0.0
 
@@ -108,7 +108,7 @@ def ocr_page(fitz_page, page_num: int) -> PageResult:
             return pytesseract.image_to_data(
                 processed,
                 output_type=pytesseract.Output.DICT,
-                config="--psm 6"  # Assume uniform block of text
+                config="--psm 6",  # Assume uniform block of text
             )
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
@@ -118,9 +118,7 @@ def ocr_page(fitz_page, page_num: int) -> PageResult:
             except concurrent.futures.TimeoutError:
                 raise TimeoutError("Tesseract OCR timed out")
 
-        text = " ".join(
-            word for word in data["text"] if word.strip()
-        )
+        text = " ".join(word for word in data["text"] if word.strip())
         confidence = _get_tesseract_confidence(data)
 
         if confidence < HANDWRITING_CONFIDENCE_THRESHOLD:

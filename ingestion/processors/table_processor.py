@@ -21,7 +21,9 @@ def _rows_to_markdown(rows: List[List[str]]) -> str:
         return ""
 
     # Clean cells
-    clean_rows = [[str(cell).strip() if cell is not None else "" for cell in row] for row in rows]
+    clean_rows = [
+        [str(cell).strip() if cell is not None else "" for cell in row] for row in rows
+    ]
 
     header = clean_rows[0]
     separator = ["---"] * len(header)
@@ -47,33 +49,31 @@ def extract_tables_camelot(file_path: Path, page_num: int) -> List[ExtractedTabl
 
         # Try lattice flavor first (good for tables with grid lines)
         result = camelot.read_pdf(
-            str(file_path),
-            pages=page_str,
-            flavor="lattice",
-            suppress_stdout=True
+            str(file_path), pages=page_str, flavor="lattice", suppress_stdout=True
         )
         if result.n == 0:
             # Fallback to stream flavor (whitespace-based)
             result = camelot.read_pdf(
-                str(file_path),
-                pages=page_str,
-                flavor="stream",
-                suppress_stdout=True
+                str(file_path), pages=page_str, flavor="stream", suppress_stdout=True
             )
 
         for tbl in result:
             rows = tbl.df.values.tolist()
             if rows:
-                tables.append(ExtractedTable(
-                    page=page_num + 1,
-                    markdown=_rows_to_markdown(rows),
-                    rows=[[str(c) for c in row] for row in rows],
-                ))
+                tables.append(
+                    ExtractedTable(
+                        page=page_num + 1,
+                        markdown=_rows_to_markdown(rows),
+                        rows=[[str(c) for c in row] for row in rows],
+                    )
+                )
 
     except ImportError:
         logger.warning("camelot not available, falling back to pdfplumber")
     except Exception as e:
-        logger.warning(f"camelot failed on page {page_num + 1}: {e} — trying pdfplumber")
+        logger.warning(
+            f"camelot failed on page {page_num + 1}: {e} — trying pdfplumber"
+        )
 
     return tables
 
@@ -89,14 +89,21 @@ def extract_tables_pdfplumber(file_path: Path, page_num: int) -> List[ExtractedT
             raw_tables = page.extract_tables()
             for raw in raw_tables:
                 if raw:
-                    rows = [[str(cell) if cell is not None else "" for cell in row] for row in raw]
-                    tables.append(ExtractedTable(
-                        page=page_num + 1,
-                        markdown=_rows_to_markdown(rows),
-                        rows=rows,
-                    ))
+                    rows = [
+                        [str(cell) if cell is not None else "" for cell in row]
+                        for row in raw
+                    ]
+                    tables.append(
+                        ExtractedTable(
+                            page=page_num + 1,
+                            markdown=_rows_to_markdown(rows),
+                            rows=rows,
+                        )
+                    )
     except Exception as e:
-        logger.warning(f"pdfplumber table extraction failed on page {page_num + 1}: {e}")
+        logger.warning(
+            f"pdfplumber table extraction failed on page {page_num + 1}: {e}"
+        )
 
     return tables
 

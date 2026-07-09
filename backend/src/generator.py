@@ -2,6 +2,7 @@
 Day 3 & 4: Answer Generator with REAL Contradiction Detection, Citation formatting,
 and Faithfulness scoring.
 """
+
 from dataclasses import dataclass, field
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core.schema import NodeWithScore
@@ -11,6 +12,7 @@ from backend.src.llm_utils import RateLimitedLLM
 @dataclass
 class GenerationResult:
     """Structured result from the answer generation pipeline."""
+
     answer: str = ""
     contradiction_detected: bool = False
     contradiction_details: str = ""
@@ -19,7 +21,9 @@ class GenerationResult:
     abstained: bool = False
 
 
-def check_contradictions(nodes: list[NodeWithScore], llm: GoogleGenAI) -> tuple[bool, str]:
+def check_contradictions(
+    nodes: list[NodeWithScore], llm: GoogleGenAI
+) -> tuple[bool, str]:
     """
     Day 4: Pre-generation check.
     Prompt the LLM to see if the retrieved chunks contradict each other.
@@ -33,7 +37,7 @@ def check_contradictions(nodes: list[NodeWithScore], llm: GoogleGenAI) -> tuple[
     context = ""
     for idx, node in enumerate(nodes):
         source = node.node.metadata.get("source", "Unknown")
-        context += f"--- Chunk {idx+1} (Source: {source}) ---\n{node.node.text}\n\n"
+        context += f"--- Chunk {idx + 1} (Source: {source}) ---\n{node.node.text}\n\n"
 
     prompt = f"""Analyze these document chunks for contradictions in key engineering values 
 (e.g. pressure limits, torque specifications, temperature ratings, tolerances).
@@ -51,7 +55,10 @@ Chunks:
     response = safe_llm.complete(prompt)
     response_text = str(response).strip()
 
-    has_contradiction = "CONTRADICTION: YES" in response_text.upper() or "YES" in response_text.upper().split("\n")[0]
+    has_contradiction = (
+        "CONTRADICTION: YES" in response_text.upper()
+        or "YES" in response_text.upper().split("\n")[0]
+    )
 
     details = ""
     if has_contradiction and "DETAILS:" in response_text:
@@ -75,20 +82,91 @@ def compute_faithfulness(answer: str, nodes: list[NodeWithScore]) -> float:
 
     # Extract meaningful words from the answer (skip common stopwords)
     stopwords = {
-        "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-        "have", "has", "had", "do", "does", "did", "will", "would", "could",
-        "should", "may", "might", "shall", "can", "to", "of", "in", "for",
-        "on", "with", "at", "by", "from", "as", "into", "through", "during",
-        "before", "after", "and", "but", "or", "not", "no", "this", "that",
-        "it", "its", "if", "then", "than", "so", "up", "out", "about", "which",
-        "when", "where", "how", "all", "each", "every", "both", "few", "more",
-        "most", "other", "some", "such", "only", "same", "also", "very", "just",
-        "because", "between", "based", "using", "per", "must", "please",
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "can",
+        "to",
+        "of",
+        "in",
+        "for",
+        "on",
+        "with",
+        "at",
+        "by",
+        "from",
+        "as",
+        "into",
+        "through",
+        "during",
+        "before",
+        "after",
+        "and",
+        "but",
+        "or",
+        "not",
+        "no",
+        "this",
+        "that",
+        "it",
+        "its",
+        "if",
+        "then",
+        "than",
+        "so",
+        "up",
+        "out",
+        "about",
+        "which",
+        "when",
+        "where",
+        "how",
+        "all",
+        "each",
+        "every",
+        "both",
+        "few",
+        "more",
+        "most",
+        "other",
+        "some",
+        "such",
+        "only",
+        "same",
+        "also",
+        "very",
+        "just",
+        "because",
+        "between",
+        "based",
+        "using",
+        "per",
+        "must",
+        "please",
     }
 
     answer_words = [
-        w for w in answer.lower().split()
-        if w not in stopwords and len(w) > 2
+        w for w in answer.lower().split() if w not in stopwords and len(w) > 2
     ]
 
     if not answer_words:
@@ -103,10 +181,7 @@ def compute_faithfulness(answer: str, nodes: list[NodeWithScore]) -> float:
 
 
 def generate_answer(
-    query: str,
-    nodes: list[NodeWithScore],
-    llm: GoogleGenAI,
-    mode: str = "detailed"
+    query: str, nodes: list[NodeWithScore], llm: GoogleGenAI, mode: str = "detailed"
 ) -> GenerationResult:
     """Generate final answer with citations, contradiction detection, and faithfulness scoring."""
     safe_llm = RateLimitedLLM(llm)
@@ -126,12 +201,14 @@ def generate_answer(
             "doc": node.node.metadata.get("source", "Unknown"),
             "revision": node.node.metadata.get("revision", "N/A"),
             "doc_type": node.node.metadata.get("doc_type", "Unknown"),
-            "score": round(node.score, 4) if node.score else 0.0
+            "score": round(node.score, 4) if node.score else 0.0,
         }
         result.sources.append(source_info)
 
     # Day 4: Contradiction Check (REAL, not hardcoded)
-    result.contradiction_detected, result.contradiction_details = check_contradictions(nodes, llm)
+    result.contradiction_detected, result.contradiction_details = check_contradictions(
+        nodes, llm
+    )
 
     # Prepare context with metadata for citations (Day 3 requirement)
     context = ""
@@ -140,7 +217,11 @@ def generate_answer(
         rev = node.node.metadata.get("revision", "N/A")
         context += f"--- Source: [{source}, Rev {rev}] ---\n{node.node.text}\n\n"
 
-    length_instruction = "Provide a brief, concise answer (2-3 sentences max)." if mode == "brief" else "Provide a detailed, thorough answer."
+    length_instruction = (
+        "Provide a brief, concise answer (2-3 sentences max)."
+        if mode == "brief"
+        else "Provide a detailed, thorough answer."
+    )
 
     prompt = f"""You are a helpful engineering assistant.
 
@@ -157,7 +238,8 @@ Query: {query}
 """
 
     if result.contradiction_detected:
-        prompt = f"""⚠️ CRITICAL WARNING: The system detected contradictory information in the retrieved documents.
+        prompt = (
+            f"""⚠️ CRITICAL WARNING: The system detected contradictory information in the retrieved documents.
 Contradiction Details: {result.contradiction_details}
 
 You MUST:
@@ -165,7 +247,9 @@ You MUST:
 2. Cite both sources using [Doc_Name, Rev X] format.
 3. Advise the user to consult a senior engineer before proceeding.
 
-""" + prompt
+"""
+            + prompt
+        )
 
     response = safe_llm.complete(prompt)
     result.answer = str(response).strip()

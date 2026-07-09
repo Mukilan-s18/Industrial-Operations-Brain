@@ -4,13 +4,14 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def _create_csv(content: str) -> Path:
-    tmp = tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w", encoding="utf-8")
+    tmp = tempfile.NamedTemporaryFile(
+        suffix=".csv", delete=False, mode="w", encoding="utf-8"
+    )
     tmp.write(content)
     tmp.close()
     return Path(tmp.name)
@@ -41,8 +42,7 @@ def test_work_order_column_normalization():
     from ingestion.processors.workorder_processor import extract_work_orders
 
     csv_content = (
-        "EqpNum,Fault,Date,Tech,Notes\n"
-        " p-101 ,Overheat,2024-02-01,Bob,Cleaned filter\n"
+        "EqpNum,Fault,Date,Tech,Notes\n p-101 ,Overheat,2024-02-01,Bob,Cleaned filter\n"
     )
     path = _create_csv(csv_content)
     try:

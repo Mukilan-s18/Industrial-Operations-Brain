@@ -1,6 +1,5 @@
 """Tests for PDF text extraction."""
 
-import os
 import sys
 import tempfile
 from pathlib import Path
@@ -13,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 def _create_simple_pdf(text: str) -> Path:
     """Create a minimal text PDF using PyMuPDF for testing."""
     import fitz
+
     doc = fitz.open()
     page = doc.new_page()
     page.insert_text((72, 72), text)
@@ -26,7 +26,9 @@ def test_pdf_extraction_returns_text():
     """Extracted text length must be > 0 for a valid PDF."""
     from ingestion.processors.pdf_processor import extract_pdf
 
-    pdf_path = _create_simple_pdf("Standard Operating Procedure Rev. 4\nP-101 valve inspection")
+    pdf_path = _create_simple_pdf(
+        "Standard Operating Procedure Rev. 4\nP-101 valve inspection"
+    )
     try:
         pages, doc_type = extract_pdf(pdf_path)
         full_text = " ".join(p.text for p in pages)
@@ -81,7 +83,11 @@ def test_equipment_id_extraction():
 
 def test_document_deduplication():
     """Same file uploaded twice should be detected as duplicate."""
-    from ingestion.utils.deduplication import check_duplicate, register_document, clear_registry
+    from ingestion.utils.deduplication import (
+        check_duplicate,
+        register_document,
+        clear_registry,
+    )
 
     clear_registry()
     pdf_path = _create_simple_pdf("Test document for deduplication check")

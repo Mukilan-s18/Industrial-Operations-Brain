@@ -1,0 +1,16 @@
+[tool.ruff]
+exclude = [
+    "ui_updates.py",
+    "scripts",
+    "demo_docs",
+]
+
+[tool.ruff.lint]
+# Ignore E402 (module level import not at top of file) and F841 (unused variable) for now
+ignore = ["E402", "F841", "E701", "E741", "F401"]
+
+[tool.coverage.run]
+omit = [
+    "backend/src/iot_simulator.py",
+    "backend/src/neo4j_exporter.py"
+]

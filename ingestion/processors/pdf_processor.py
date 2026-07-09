@@ -9,7 +9,7 @@ from typing import List
 
 import fitz  # PyMuPDF
 
-from ingestion.models.schemas import DocType, ExtractedTable, PageResult
+from ingestion.models.schemas import DocType, PageResult
 from ingestion.processors.ocr_processor import ocr_page
 from ingestion.processors.table_processor import extract_tables_from_page
 

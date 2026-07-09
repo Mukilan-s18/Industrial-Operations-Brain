@@ -42,13 +42,17 @@ class TaskRecord:
 _tasks: Dict[str, TaskRecord] = {}
 _lock = threading.Lock()
 
+
 def _evict_old_tasks():
     """Evict DONE or FAILED tasks older than 1 hour (3600 seconds)."""
     now = time.time()
     to_delete = []
     with _lock:
         for task_id, record in _tasks.items():
-            if record.status in (TaskStatus.DONE, TaskStatus.FAILED) and record.completed_at:
+            if (
+                record.status in (TaskStatus.DONE, TaskStatus.FAILED)
+                and record.completed_at
+            ):
                 if now - record.completed_at > 3600:
                     to_delete.append(task_id)
         for task_id in to_delete:
@@ -73,7 +77,9 @@ def get_task(task_id: str) -> Optional[TaskRecord]:
         return _tasks.get(task_id)
 
 
-def run_ingestion_async(task_id: str, tmp_path: Path, filename: str, category: str, file_hash: str):
+def run_ingestion_async(
+    task_id: str, tmp_path: Path, filename: str, category: str, file_hash: str
+):
     """
     Run full ingestion in a background thread.
     Updates the TaskRecord in-place as processing proceeds.
@@ -105,7 +111,7 @@ def run_ingestion_async(task_id: str, tmp_path: Path, filename: str, category: s
     try:
         with _lock:
             record.progress = f"Extracting {category}..."
-        
+
         pages, doc_type, pipe_warnings = run_extraction_pipeline(tmp_path, category)
         warnings.extend(pipe_warnings)
 
@@ -140,7 +146,9 @@ def run_ingestion_async(task_id: str, tmp_path: Path, filename: str, category: s
             record.status = TaskStatus.DONE
             record.result = result.model_dump()
             record.completed_at = time.time()
-            record.progress = f"Done — {len(pages)} pages processed in {elapsed_ms:.0f}ms"
+            record.progress = (
+                f"Done — {len(pages)} pages processed in {elapsed_ms:.0f}ms"
+            )
 
         logger.info(f"Task {task_id} completed: {filename} ({elapsed_ms:.0f}ms)")
 
@@ -162,18 +170,23 @@ def should_process_async(file_path: Path) -> bool:
     """Return True if the file should be processed asynchronously."""
     size = file_path.stat().st_size
     if size > ASYNC_FILE_SIZE_BYTES:
-        logger.info(f"File {file_path.name} is {size / 1024 / 1024:.1f}MB — routing to async")
+        logger.info(
+            f"File {file_path.name} is {size / 1024 / 1024:.1f}MB — routing to async"
+        )
         return True
 
     # Quick page count check for PDFs
     if file_path.suffix.lower() == ".pdf":
         try:
             import fitz
+
             doc = fitz.open(str(file_path))
             pages = len(doc)
             doc.close()
             if pages > ASYNC_PAGE_THRESHOLD:
-                logger.info(f"File {file_path.name} has {pages} pages — routing to async")
+                logger.info(
+                    f"File {file_path.name} has {pages} pages — routing to async"
+                )
                 return True
         except Exception:
             pass

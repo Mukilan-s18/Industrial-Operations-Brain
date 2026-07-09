@@ -43,6 +43,7 @@ def detect_language(text: str) -> Tuple[str, bool]:
     # Try langdetect for other languages
     try:
         from langdetect import detect, LangDetectException
+
         detected = detect(text)
         return detected, False
     except ImportError:

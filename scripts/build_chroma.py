@@ -61,7 +61,7 @@ def setup_index():
     print(f"\n[1/4] Loading embedding model: {EMBED_MODEL_NAME}")
     embed_model = HuggingFaceEmbedding(model_name=EMBED_MODEL_NAME)
     Settings.embed_model = embed_model
-    print(f"  -> Embedding model loaded (dimension: 384)")
+    print("  -> Embedding model loaded (dimension: 384)")
 
     # 2. Load the PDF
     print(f"\n[2/4] Loading PDF: {PDF_PATH}")
@@ -110,7 +110,7 @@ def setup_index():
     )
 
     print(f"  -> Done! {chroma_collection.count()} vectors stored in ChromaDB")
-    print(f"\n[SETUP COMPLETE] Index is ready for queries.")
+    print("\n[SETUP COMPLETE] Index is ready for queries.")
     return index
 
 

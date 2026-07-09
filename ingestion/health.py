@@ -23,8 +23,7 @@ def _check_tesseract() -> bool:
     """Check if Tesseract is on PATH and executable."""
     try:
         result = subprocess.run(
-            ["tesseract", "--version"],
-            capture_output=True, text=True, timeout=5
+            ["tesseract", "--version"], capture_output=True, text=True, timeout=5
         )
         return result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -35,7 +34,7 @@ def _check_disk_space() -> tuple[bool, float]:
     """Check free disk space at the working directory."""
     try:
         usage = shutil.disk_usage(Path.cwd())
-        free_gb = usage.free / (1024 ** 3)
+        free_gb = usage.free / (1024**3)
         return free_gb >= MIN_FREE_DISK_GB, free_gb
     except Exception:
         return False, 0.0

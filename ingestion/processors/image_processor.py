@@ -6,9 +6,7 @@ Uses Gemini 1.5 Flash Multimodal to natively extract tags and flow information f
 import logging
 import os
 from io import BytesIO
-from pathlib import Path
 from typing import List
-import json
 
 from PIL import Image
 from dotenv import load_dotenv
@@ -22,19 +20,20 @@ api_key = os.getenv("GOOGLE_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
+
 def extract_image_text_from_pdf(fitz_page) -> List[str]:
     """
     Extract text and structured tags from all images embedded in a PDF page.
     Uses Gemini 1.5 Flash (Multimodal) for P&ID drawings.
     """
     extracted_texts: List[str] = []
-    
+
     if not api_key:
         logger.warning("GOOGLE_API_KEY not set. Skipping Gemini multimodal extraction.")
         return extracted_texts
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel("gemini-1.5-flash")
         image_list = fitz_page.get_images(full=True)
         doc = fitz_page.parent
 
@@ -54,7 +53,7 @@ def extract_image_text_from_pdf(fitz_page) -> List[str]:
                 )
 
                 response = model.generate_content([prompt, pil_image])
-                
+
                 text = response.text.strip()
                 if text:
                     extracted_texts.append(text)

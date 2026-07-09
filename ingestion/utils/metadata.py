@@ -7,7 +7,7 @@ import hashlib
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,10 @@ REV_PATTERNS = [
 DATE_PATTERNS = [
     re.compile(r"\b(\d{2}/\d{2}/\d{4})\b"),
     re.compile(r"\b(\d{4}-\d{2}-\d{2})\b"),
-    re.compile(r"\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})\b", re.IGNORECASE),
+    re.compile(
+        r"\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4})\b",
+        re.IGNORECASE,
+    ),
 ]
 
 # Equipment ID patterns: P-101, HV-204, FCV-301, T-1, E-100A

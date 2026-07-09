@@ -3,7 +3,6 @@ Day 2: Ingestion pipeline with Semantic Chunking and Metadata
 Reads from data/corpus/ and creates distinct ChromaDB collections.
 """
 import os
-import sys
 from dotenv import load_dotenv
 
 import chromadb

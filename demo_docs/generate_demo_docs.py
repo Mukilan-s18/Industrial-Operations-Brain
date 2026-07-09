@@ -3,7 +3,6 @@ Generate synthetic demo documents for the Industrial Operations Brain demo.
 Run: python demo_docs/generate_demo_docs.py
 """
 
-import os
 from pathlib import Path
 
 OUTPUT_DIR = Path(__file__).parent

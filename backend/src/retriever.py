@@ -1,10 +1,10 @@
 """
 Day 3, 4 & 10: Custom Retriever with Hybrid Search (Graph + Vector), Abstention, and RBAC
 """
-import os
+
 import chromadb
 import re
-from typing import List, Optional
+from typing import List
 
 from llama_index.core import VectorStoreIndex, QueryBundle
 from llama_index.core.retrievers import BaseRetriever
@@ -15,14 +15,14 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
 class HybridGraphRetriever(BaseRetriever):
     def __init__(
-        self, 
-        chroma_db_path: str, 
-        collection_names: List[str], 
+        self,
+        chroma_db_path: str,
+        collection_names: List[str],
         embed_model: HuggingFaceEmbedding,
         builder=None,
         role: str = "operator",
         similarity_top_k: int = 3,
-        abstention_distance_threshold: float = 0.8  # If distance > 0.8, abstain
+        abstention_distance_threshold: float = 0.8,  # If distance > 0.8, abstain
     ):
         self.chroma_client = chromadb.PersistentClient(path=chroma_db_path)
         self.collection_names = collection_names
@@ -32,10 +32,10 @@ class HybridGraphRetriever(BaseRetriever):
         self.builder = builder
         self.role = role.lower()
         super().__init__()
-        
+
     def _retrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
         query_text = query_bundle.query_str
-        
+
         # 1. Vector Search across collections
         all_vector_nodes = []
         for coll_name in self.collection_names:
@@ -52,7 +52,7 @@ class HybridGraphRetriever(BaseRetriever):
                 all_vector_nodes.extend(nodes)
             except Exception as e:
                 print(f"Warning: Could not search collection {coll_name}: {e}")
-                
+
         # Filter chunks by RBAC
         # Operators cannot see compliance reports or regulations
         if self.role == "operator":
@@ -60,19 +60,25 @@ class HybridGraphRetriever(BaseRetriever):
             for n in all_vector_nodes:
                 source = n.node.metadata.get("source", "").lower()
                 text = n.node.get_content().lower()
-                if "compliance" in source or "regulation" in source or "audit" in source:
+                if (
+                    "compliance" in source
+                    or "regulation" in source
+                    or "audit" in source
+                ):
                     continue
                 filtered_nodes.append(n)
             all_vector_nodes = filtered_nodes
 
         all_vector_nodes.sort(key=lambda x: x.score, reverse=True)
-        top_nodes = all_vector_nodes[:self.similarity_top_k]
-        
+        top_nodes = all_vector_nodes[: self.similarity_top_k]
+
         # Abstention Check
         if top_nodes:
             best_score = top_nodes[0].score
             if best_score < 0.3:
-                abstain_doc = Document(text="[ABSTAIN] Escalate to engineer. Confidence too low.")
+                abstain_doc = Document(
+                    text="[ABSTAIN] Escalate to engineer. Confidence too low."
+                )
                 return [NodeWithScore(node=abstain_doc, score=1.0)]
 
         # 2. Graph Traversal (Real Graph integration)
@@ -83,40 +89,44 @@ class HybridGraphRetriever(BaseRetriever):
                 context = self.query_graph_neighbors(entity)
                 if context:
                     graph_contexts.append(context)
-                    
+
             if graph_contexts:
                 combined_graph_text = "\n".join(graph_contexts)
                 graph_doc = Document(
                     text=combined_graph_text,
-                    metadata={"source": "Knowledge Graph", "doc_type": "GRAPH"}
+                    metadata={"source": "Knowledge Graph", "doc_type": "GRAPH"},
                 )
                 top_nodes.append(NodeWithScore(node=graph_doc, score=1.0))
-                
+
         return top_nodes
 
     def extract_entities_from_query(self, query: str) -> List[str]:
         """Extract equipment tags from the query for graph entry points."""
-        tags = set(re.findall(r'[A-Z]{1,3}-\d{2,4}', query.upper()))
+        tags = set(re.findall(r"[A-Z]{1,3}-\d{2,4}", query.upper()))
         return list(tags)
-        
+
     def query_graph_neighbors(self, entity: str) -> str:
         """Returns 1-hop neighbors from the Knowledge Graph."""
-        if not self.builder or not hasattr(self.builder, 'G'):
+        if not self.builder or not hasattr(self.builder, "G"):
             return ""
-            
+
         resolved_id = self.builder.resolve_node_id(entity, "EQUIPMENT")
-        
+
         if self.builder.G.has_node(resolved_id):
             context = f"Graph Context for {resolved_id}:\n"
             for _, target, data in self.builder.G.out_edges(resolved_id, data=True):
                 target_node = self.builder.G.nodes[target]
-                
+
                 # Enforce Graph RBAC: Operators cannot see REGULATION nodes
                 if self.role == "operator" and target_node.get("label") == "REGULATION":
                     continue
-                    
+
                 rel = data.get("type", "RELATED_TO")
-                date_str = f" (Date: {data.get('valid_from', '')})" if 'valid_from' in data else ""
+                date_str = (
+                    f" (Date: {data.get('valid_from', '')})"
+                    if "valid_from" in data
+                    else ""
+                )
                 context += f"- {resolved_id} {rel} {target}{date_str}\n"
             return context
         return ""

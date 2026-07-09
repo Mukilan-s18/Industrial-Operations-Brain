@@ -15,10 +15,8 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, Request
 from fastapi.responses import JSONResponse
 
 from ingestion.models.schemas import (
-    DocType,
     DocumentMetadata,
     IngestionResult,
-    PageResult,
 )
 from ingestion.utils.pipeline import run_extraction_pipeline
 from ingestion.utils.deduplication import (
@@ -27,7 +25,6 @@ from ingestion.utils.deduplication import (
 )
 from ingestion.utils.language import detect_language
 from ingestion.utils.metadata import (
-    compute_file_hash,
     extract_date,
     extract_equipment_ids,
     extract_revision,
@@ -47,6 +44,7 @@ router = APIRouter(prefix="/ingest", tags=["ingestion"])
 
 VERSION_REGISTRY_FILE = Path("version_registry.json")
 
+
 def load_version_registry():
     if VERSION_REGISTRY_FILE.exists():
         try:
@@ -56,9 +54,11 @@ def load_version_registry():
             return {}
     return {}
 
+
 def save_version_registry(registry):
     with open(VERSION_REGISTRY_FILE, "w") as f:
         json.dump(registry, f)
+
 
 # In-process version registry for conflict detection: title → (doc_id, rev_number)
 _version_registry: dict = load_version_registry()
@@ -119,7 +119,13 @@ async def ingest_document(request: Request, file: UploadFile = File(...)):
             # Hand off tmp_path ownership to the background thread
             thread = threading.Thread(
                 target=run_ingestion_async,
-                args=(task_id, tmp_path, file.filename or "unknown", category, file_hash),
+                args=(
+                    task_id,
+                    tmp_path,
+                    file.filename or "unknown",
+                    category,
+                    file_hash,
+                ),
                 daemon=True,
             )
             thread.start()
@@ -263,6 +269,6 @@ async def reset_registry():
     global _version_registry
     _version_registry = {}
     save_version_registry(_version_registry)
-    
+
     # We can also clean up deduplication cache if there's a function for it
     return JSONResponse(content={"message": "Registry reset successfully"})

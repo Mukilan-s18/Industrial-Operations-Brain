@@ -27,6 +27,7 @@ def detect_mime_type(file_path: Path) -> str:
     """Detect MIME type using python-magic (content-based, not extension-based)."""
     try:
         import magic
+
         mime = magic.from_file(str(file_path), mime=True)
         return mime
     except ImportError:

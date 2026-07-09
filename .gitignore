@@ -14,3 +14,6 @@ static/temp_graph_*.html
 *.db
 .vscode/
 iot_data.json
+chroma_db/
+data/documents.json
+.venv_test/

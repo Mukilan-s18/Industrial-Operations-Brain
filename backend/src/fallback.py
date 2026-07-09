@@ -15,9 +15,9 @@ FALLBACK_RESPONSES = {
         ),
         "sources": [
             {"doc": "sop_101.txt", "revision": 4, "section": "Valve Pressure Limits"},
-            {"doc": "sop_101_b.txt", "revision": 2, "section": "Valve Limits"}
+            {"doc": "sop_101_b.txt", "revision": 2, "section": "Valve Limits"},
         ],
-        "contradiction_detected": True
+        "contradiction_detected": True,
     },
     "failures related to p-101 in last 2 years": {
         "answer": (
@@ -30,9 +30,13 @@ FALLBACK_RESPONSES = {
         "sources": [
             {"doc": "wo_998.txt", "revision": 1, "section": "Resolution"},
             {"doc": "sop_101.txt", "revision": 4, "section": "Torque Specifications"},
-            {"doc": "Knowledge Graph", "revision": None, "section": "P-101 failure modes"}
+            {
+                "doc": "Knowledge Graph",
+                "revision": None,
+                "section": "P-101 failure modes",
+            },
         ],
-        "contradiction_detected": False
+        "contradiction_detected": False,
     },
     "what is the torque specification for p-101 housing bolts?": {
         "answer": (
@@ -44,9 +48,9 @@ FALLBACK_RESPONSES = {
         ),
         "sources": [
             {"doc": "sop_101.txt", "revision": 4, "section": "Torque Specifications"},
-            {"doc": "sop_101_b.txt", "revision": 2, "section": "Torque Specifications"}
+            {"doc": "sop_101_b.txt", "revision": 2, "section": "Torque Specifications"},
         ],
-        "contradiction_detected": True
+        "contradiction_detected": True,
     },
     "what osha standard covers lockout tagout?": {
         "answer": (
@@ -58,7 +62,7 @@ FALLBACK_RESPONSES = {
         "sources": [
             {"doc": "osha_1910_147.txt", "revision": 1, "section": "Full document"}
         ],
-        "contradiction_detected": False
+        "contradiction_detected": False,
     },
     "what ppe is required for pump maintenance?": {
         "answer": (
@@ -71,14 +75,15 @@ FALLBACK_RESPONSES = {
         ),
         "sources": [
             {"doc": "sop_101.txt", "revision": 4, "section": "Safety Warnings"},
-            {"doc": "osha_1910_147.txt", "revision": 1, "section": "Full document"}
+            {"doc": "osha_1910_147.txt", "revision": 1, "section": "Full document"},
         ],
-        "contradiction_detected": False
-    }
+        "contradiction_detected": False,
+    },
 }
 
 
 import typing
+
 
 def get_fallback(query: str) -> typing.Optional[dict]:
     """Look up a fallback response for the given query. Returns None if no fallback exists."""

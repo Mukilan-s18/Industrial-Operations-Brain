@@ -16,7 +16,9 @@ def check_python():
         print(f"✗ Python 3.9+ required, got {version.major}.{version.minor}")
         sys.exit(1)
     elif version < (3, 10):
-        print(f"⚠  Python {version.major}.{version.minor}.{version.micro} (3.10+ recommended, but 3.9 works)")
+        print(
+            f"⚠  Python {version.major}.{version.minor}.{version.micro} (3.10+ recommended, but 3.9 works)"
+        )
     else:
         print(f"✓ Python {version.major}.{version.minor}.{version.micro}")
 
@@ -24,8 +26,14 @@ def check_python():
 def check_tesseract():
     path = shutil.which("tesseract")
     if path:
-        result = subprocess.run(["tesseract", "--version"], capture_output=True, text=True)
-        version_line = result.stdout.split("\n")[0] if result.stdout else result.stderr.split("\n")[0]
+        result = subprocess.run(
+            ["tesseract", "--version"], capture_output=True, text=True
+        )
+        version_line = (
+            result.stdout.split("\n")[0]
+            if result.stdout
+            else result.stderr.split("\n")[0]
+        )
         print(f"✓ Tesseract found at {path} ({version_line.strip()})")
     else:
         print("✗ Tesseract NOT found on PATH")
@@ -41,6 +49,7 @@ def check_env():
     if not env_file.exists():
         if example_file.exists():
             import shutil
+
             shutil.copy(str(example_file), str(env_file))
             print("✓ Created .env from .env.example (fill in your API keys)")
         else:
@@ -51,8 +60,9 @@ def check_env():
 
 def check_disk_space():
     import shutil as sh
+
     usage = sh.disk_usage(Path.cwd())
-    free_gb = usage.free / (1024 ** 3)
+    free_gb = usage.free / (1024**3)
     if free_gb < 1.0:
         print(f"⚠  Low disk space: {free_gb:.2f} GB free (recommend 1+ GB)")
     else:

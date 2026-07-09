@@ -15,25 +15,59 @@ logger = logging.getLogger(__name__)
 # Mapping of raw column name variants → standard schema fields
 COLUMN_MAP = {
     "equipment_id": [
-        "equipment_id", "eqpnum", "assetid", "asset_id",
-        "equip_id", "equipment", "asset", "machine_id",
-        "equipmentid", "eq_id", "eq id", "asset no", "equip no",
+        "equipment_id",
+        "eqpnum",
+        "assetid",
+        "asset_id",
+        "equip_id",
+        "equipment",
+        "asset",
+        "machine_id",
+        "equipmentid",
+        "eq_id",
+        "eq id",
+        "asset no",
+        "equip no",
     ],
     "failure_type": [
-        "failure_type", "failure", "fault", "fault_type", "issue",
-        "problem", "defect", "failure type", "fault type",
+        "failure_type",
+        "failure",
+        "fault",
+        "fault_type",
+        "issue",
+        "problem",
+        "defect",
+        "failure type",
+        "fault type",
     ],
     "date": [
-        "date", "wo_date", "work_order_date", "reported_date",
-        "event_date", "date_reported", "date reported",
+        "date",
+        "wo_date",
+        "work_order_date",
+        "reported_date",
+        "event_date",
+        "date_reported",
+        "date reported",
     ],
     "technician": [
-        "technician", "tech", "technician_name", "assigned_to",
-        "operator", "engineer", "mechanic", "technician name",
+        "technician",
+        "tech",
+        "technician_name",
+        "assigned_to",
+        "operator",
+        "engineer",
+        "mechanic",
+        "technician name",
     ],
     "resolution": [
-        "resolution", "action", "corrective_action", "fix",
-        "resolution_notes", "action_taken", "notes", "remarks",
+        "resolution",
+        "action",
+        "corrective_action",
+        "fix",
+        "resolution_notes",
+        "action_taken",
+        "notes",
+        "remarks",
         "corrective action",
     ],
 }
@@ -110,7 +144,9 @@ def extract_work_orders(file_path: Path) -> List[Dict[str, Any]]:
         requires_review = False
 
         if equipment_id is None:
-            logger.warning(f"Row {idx}: Missing equipment_id — flagged for manual review")
+            logger.warning(
+                f"Row {idx}: Missing equipment_id — flagged for manual review"
+            )
             requires_review = True
 
         record: Dict[str, Any] = {

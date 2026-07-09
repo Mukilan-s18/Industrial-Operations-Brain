@@ -2,6 +2,7 @@
 Utility: Rate-limit-aware LLM wrapper with automatic retry + backoff.
 Wraps GoogleGenAI to handle 429 RESOURCE_EXHAUSTED errors gracefully.
 """
+
 import time
 import re
 import sys
@@ -30,8 +31,10 @@ class RateLimitedLLM:
                     # Extract retry delay from error message
                     wait = self._parse_retry_delay(error_str)
                     if attempt < self.max_retries - 1:
-                        print(f"  [RATE LIMIT] Waiting {wait:.0f}s before retry ({attempt+2}/{self.max_retries})...",
-                              file=sys.stderr)
+                        print(
+                            f"  [RATE LIMIT] Waiting {wait:.0f}s before retry ({attempt + 2}/{self.max_retries})...",
+                            file=sys.stderr,
+                        )
                         time.sleep(wait)
                     else:
                         raise
@@ -42,7 +45,11 @@ class RateLimitedLLM:
     def _parse_retry_delay(error_str: str) -> float:
         """Extract the retry delay from a Gemini 429 error message."""
         # Look for patterns like "retry in 41.914965148s" or "retryDelay: '41s'"
-        match = re.search(r'retry\s*(?:in|Delay[\'\":\s]*)\s*(\d+\.?\d*)\s*s', error_str, re.IGNORECASE)
+        match = re.search(
+            r"retry\s*(?:in|Delay[\'\":\s]*)\s*(\d+\.?\d*)\s*s",
+            error_str,
+            re.IGNORECASE,
+        )
         if match:
             return float(match.group(1)) + 2  # Add 2s buffer
         return 45  # Default wait
