@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core.schema import NodeWithScore
 from backend.src.llm_utils import RateLimitedLLM
+import requests
+import os
 
 
 @dataclass
@@ -181,7 +183,11 @@ def compute_faithfulness(answer: str, nodes: list[NodeWithScore]) -> float:
 
 
 def generate_answer(
-    query: str, nodes: list[NodeWithScore], llm: GoogleGenAI, mode: str = "detailed"
+    query: str,
+    nodes: list[NodeWithScore],
+    llm: GoogleGenAI,
+    mode: str = "detailed",
+    image_b64: str = None,
 ) -> GenerationResult:
     """Generate final answer with citations, contradiction detection, and faithfulness scoring."""
     safe_llm = RateLimitedLLM(llm)
@@ -251,8 +257,38 @@ You MUST:
             + prompt
         )
 
-    response = safe_llm.complete(prompt)
-    result.answer = str(response).strip()
+    if image_b64:
+        if "," in image_b64:
+            header, image_b64 = image_b64.split(",", 1)
+            mime_type = header.split(";")[0].split(":")[1]
+        else:
+            mime_type = "image/jpeg"
+
+        api_key = os.getenv("GOOGLE_API_KEY")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {"inline_data": {"mime_type": mime_type, "data": image_b64}},
+                    ]
+                }
+            ]
+        }
+        try:
+            resp = requests.post(
+                url, json=payload, headers={"Content-Type": "application/json"}
+            )
+            resp_data = resp.json()
+            result.answer = resp_data["candidates"][0]["content"]["parts"][0][
+                "text"
+            ].strip()
+        except Exception as e:
+            result.answer = f"Error processing image with Gemini API: {e}"
+    else:
+        response = safe_llm.complete(prompt)
+        result.answer = str(response).strip()
 
     # Day 9: Compute REAL faithfulness score
     result.faithfulness_score = compute_faithfulness(result.answer, nodes)

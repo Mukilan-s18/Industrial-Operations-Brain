@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api, { fetchToken } from '@/lib/api';
 import { Activity, Database, Zap, BookOpen } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface Metrics {
   corpus_coverage_pct: number;
@@ -11,7 +12,7 @@ interface Metrics {
   collections: string[];
 }
 
-export default function LiveMetrics() {
+export default function LiveMetrics({ activeRole }: { activeRole: string }) {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
 
   useEffect(() => {
@@ -45,41 +46,41 @@ export default function LiveMetrics() {
             </div>
         ) : (
             <div className="grid grid-cols-2 gap-6 max-w-4xl mx-auto">
-                <div className="glass-card p-6 flex flex-col items-center justify-center text-center">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }} className="glass-card p-6 flex flex-col items-center justify-center text-center">
                     <Database size={32} className="text-blue-400 mb-4" />
-                    <h3 className="text-sm font-semibold text-slate-400">CORPUS COVERAGE</h3>
-                    <p className="text-4xl font-bold mt-2 text-white">{metrics.corpus_coverage_pct}%</p>
-                </div>
+                    <h3 className="text-sm font-semibold text-slate-400 tracking-wider">CORPUS COVERAGE</h3>
+                    <p className="text-5xl font-bold mt-3 text-gradient">{metrics.corpus_coverage_pct}%</p>
+                </motion.div>
                 
-                <div className="glass-card p-6 flex flex-col items-center justify-center text-center">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-6 flex flex-col items-center justify-center text-center">
                     <Zap size={32} className="text-yellow-400 mb-4" />
-                    <h3 className="text-sm font-semibold text-slate-400">CACHED QUERIES</h3>
-                    <p className="text-4xl font-bold mt-2 text-white">{metrics.total_cached_queries}</p>
-                </div>
+                    <h3 className="text-sm font-semibold text-slate-400 tracking-wider">CACHED QUERIES</h3>
+                    <p className="text-5xl font-bold mt-3 text-gradient">{metrics.total_cached_queries}</p>
+                </motion.div>
 
-                <div className="glass-card p-6 flex flex-col items-center justify-center text-center">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-6 flex flex-col items-center justify-center text-center">
                     <Activity size={32} className={metrics.fallback_mode ? "text-red-400 mb-4" : "text-emerald-400 mb-4"} />
-                    <h3 className="text-sm font-semibold text-slate-400">FALLBACK MODE</h3>
-                    <p className="text-xl font-bold mt-2 text-white">
+                    <h3 className="text-sm font-semibold text-slate-400 tracking-wider">FALLBACK MODE</h3>
+                    <p className="text-xl font-bold mt-4 text-white">
                         {metrics.fallback_mode ? (
-                            <span className="px-3 py-1 bg-red-400/20 text-red-400 rounded-full">ACTIVE</span>
+                            <span className="px-4 py-2 bg-red-400/20 border border-red-400/30 text-red-400 rounded-full text-xs tracking-widest font-bold">ACTIVE</span>
                         ) : (
-                            <span className="px-3 py-1 bg-emerald-400/20 text-emerald-400 rounded-full">INACTIVE</span>
+                            <span className="px-4 py-2 bg-emerald-400/20 border border-emerald-400/30 text-emerald-400 rounded-full text-xs tracking-widest font-bold">INACTIVE</span>
                         )}
                     </p>
-                </div>
+                </motion.div>
 
-                <div className="glass-card p-6 flex flex-col items-center justify-center text-center">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card p-6 flex flex-col items-center justify-center text-center">
                     <BookOpen size={32} className="text-purple-400 mb-4" />
-                    <h3 className="text-sm font-semibold text-slate-400">ACTIVE COLLECTIONS</h3>
+                    <h3 className="text-sm font-semibold text-slate-400 tracking-wider">ACTIVE COLLECTIONS</h3>
                     <div className="flex flex-wrap justify-center gap-2 mt-4">
                         {metrics.collections.map(c => (
-                            <span key={c} className="text-xs px-2 py-1 bg-white/10 rounded-md text-slate-200">
+                            <span key={c} className="text-xs px-3 py-1 bg-white/5 border border-white/10 rounded-md text-slate-200">
                                 {c}
                             </span>
                         ))}
                     </div>
-                </div>
+                </motion.div>
             </div>
         )}
       </div>

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Shield, Settings, Server, User, Search, Activity } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { motion } from 'framer-motion';
 
 export const PERSONAS = [
   { id: 'Ravi (Operator)', role: 'Operator' },
@@ -43,15 +44,17 @@ export default function Sidebar({
               <button
                 key={p.id}
                 onClick={() => setActiveRole(p.id)}
-                className={twMerge(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm font-medium",
-                  activeRole === p.id 
-                    ? "bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]" 
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
-                )}
+                className="w-full relative px-3 py-2 rounded-md transition-all text-sm font-medium flex items-center gap-3 text-slate-400 hover:text-white"
               >
-                <User size={16} />
-                {p.id}
+                {activeRole === p.id && (
+                  <motion.div
+                    layoutId="activeRole"
+                    className="absolute inset-0 bg-white shadow-[0_0_15px_rgba(255,255,255,0.2)] rounded-md"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <User size={16} className="relative z-10" />
+                <span className={twMerge("relative z-10", activeRole === p.id ? "text-black" : "")}>{p.id}</span>
               </button>
             ))}
           </div>
@@ -64,36 +67,27 @@ export default function Sidebar({
             <span>MODULES</span>
           </div>
           <div className="space-y-2">
-            <button 
-              onClick={() => setActiveTab('chat')}
-              className={twMerge(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm font-medium",
-                activeTab === 'chat' ? "bg-white/10 text-white border border-white/20" : "text-slate-400 hover:bg-white/10 hover:text-white"
-              )}
-            >
-              <Search size={16} />
-              RCA Chat
-            </button>
-            <button 
-              onClick={() => setActiveTab('graph')}
-              className={twMerge(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm font-medium",
-                activeTab === 'graph' ? "bg-white/10 text-white border border-white/20" : "text-slate-400 hover:bg-white/10 hover:text-white"
-              )}
-            >
-              <Server size={16} />
-              Knowledge Graph
-            </button>
-            <button 
-              onClick={() => setActiveTab('metrics')}
-              className={twMerge(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-sm font-medium",
-                activeTab === 'metrics' ? "bg-white/10 text-white border border-white/20" : "text-slate-400 hover:bg-white/10 hover:text-white"
-              )}
-            >
-              <Activity size={16} />
-              Live Metrics
-            </button>
+            {[
+              { id: 'chat', label: 'RCA Chat', icon: Search },
+              { id: 'graph', label: 'Knowledge Graph', icon: Server },
+              { id: 'metrics', label: 'Live Metrics', icon: Activity }
+            ].map((tab) => (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="w-full relative px-3 py-2 rounded-md transition-all text-sm font-medium flex items-center gap-3 text-slate-400 hover:text-white group"
+              >
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 bg-white/10 border border-white/20 rounded-md"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <tab.icon size={16} className="relative z-10 group-hover:scale-110 transition-transform" />
+                <span className={twMerge("relative z-10", activeTab === tab.id ? "text-white" : "")}>{tab.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

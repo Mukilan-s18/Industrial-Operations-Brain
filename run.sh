@@ -10,7 +10,11 @@ echo "=========================================================="
 export PYTHONPATH=.
 
 # Activate virtual environment if it exists
-if [ -d ".venv" ]; then
+if [ -d ".venv_new" ]; then
+    source .venv_new/bin/activate
+elif [ -d "venv" ]; then
+    source venv/bin/activate
+elif [ -d ".venv" ]; then
     source .venv/bin/activate
 fi
 

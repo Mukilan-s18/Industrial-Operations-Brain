@@ -20,3 +20,5 @@ data/documents.json
 frontend-next/.next/
 frontend-next/node_modules/
 venv/
+.venv_new/
+.venv_new/

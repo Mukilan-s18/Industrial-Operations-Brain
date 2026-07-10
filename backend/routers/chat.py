@@ -23,13 +23,36 @@ from backend.dependencies import (
 
 router = APIRouter()
 
-# Distributed Response Cache
-redis_client = redis.from_url(settings.redis_uri, decode_responses=True)
+
+class DummyRedis:
+    def __init__(self):
+        self.cache = {}
+
+    async def get(self, key):
+        return self.cache.get(key)
+
+    async def setex(self, key, time, value):
+        self.cache[key] = value
+
+    async def scan_iter(self, match):
+        for k in list(self.cache.keys()):
+            if match.endswith("*") and k.startswith(match[:-1]):
+                yield k
+            elif k == match:
+                yield k
+
+    async def delete(self, key):
+        if key in self.cache:
+            del self.cache[key]
+
+
+redis_client = DummyRedis()
 
 
 class QueryRequest(BaseModel):
     query: str
     mode: str = "detailed"
+    image: str | None = None
 
 
 class ActionRequest(BaseModel):
@@ -106,8 +129,8 @@ async def chat_endpoint(
     inputs = {
         "original_query": req.query,
         "query": "",
-        "graph_builder": builder,
         "user_role": x_user_role,
+        "image": req.image,
     }
 
     # Asynchronous invocation for high concurrency support
@@ -219,8 +242,8 @@ async def stream_rca(
         inputs = {
             "original_query": req.query,
             "query": "",
-            "graph_builder": builder,
             "user_role": x_user_role,
+            "image": req.image,
         }
         config = {"configurable": {"thread_id": "thread-1"}}
 

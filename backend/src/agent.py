@@ -26,9 +26,9 @@ from backend.src.llm_utils import RateLimitedLLM
 
 class RCAState(TypedDict):
     query: str
-    graph_builder: Any
     user_role: str
     original_query: str
+    image: str
     live_sensor_context: str
     work_orders_context: list
     sops_context: list
@@ -135,17 +135,17 @@ def check_live_sensors(state: RCAState):
 
 
 def retrieve_work_orders(state: RCAState):
-    retriever = get_retriever(
-        ["work_orders"], state["graph_builder"], state["user_role"]
-    )
+    from backend.dependencies import builder
+
+    retriever = get_retriever(["work_orders"], builder, state["user_role"])
     nodes = retriever._retrieve(QueryBundle(state["query"]))
     return {"work_orders_context": nodes, "status": "Searching past work orders..."}
 
 
 def retrieve_sops(state: RCAState):
-    retriever = get_retriever(
-        ["sops", "regulations"], state["graph_builder"], state["user_role"]
-    )
+    from backend.dependencies import builder
+
+    retriever = get_retriever(["sops", "regulations"], builder, state["user_role"])
     nodes = retriever._retrieve(QueryBundle(state["query"]))
     return {"sops_context": nodes, "status": "Searching SOPs and regulations..."}
 
@@ -162,7 +162,9 @@ def synthesize(state: RCAState):
         mock_node = TextNode(text=live_ctx, metadata={"source": "LIVE_SCADA_SENSORS"})
         all_nodes.append(NodeWithScore(node=mock_node, score=1.0))
 
-    result: GenerationResult = generate_answer(state["query"], all_nodes, llm)
+    result: GenerationResult = generate_answer(
+        state["query"], all_nodes, llm, image_b64=state.get("image")
+    )
     return {
         "final_answer": result.answer,
         "contradiction_detected": result.contradiction_detected,
