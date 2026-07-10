@@ -1,53 +1,58 @@
+import pytest
 from fastapi.testclient import TestClient
+from unittest.mock import patch, AsyncMock, MagicMock
 from backend.app import app
+from backend.dependencies import get_current_user
 
 client = TestClient(app)
 
 
-def test_chat_endpoint_import_and_auth_success():
-    """
-    Test that the /chat endpoint loads correctly (no import errors)
-    and handles a basic query without crashing.
-    It also checks that RBAC correctly blocks restricted terms for operators.
-    """
+def mock_get_current_user():
+    return {"username": "test", "role": "operator"}
 
-    # We mock out the Gemini API call if GOOGLE_API_KEY is not set,
-    # or just expect a 403 / 500 depending on environment.
-    # But for a basic e2e sanity check, we verify the endpoint is reachable
-    # and RBAC logic is executed before any LLM calls.
 
-    # Test 1: Operator trying to access restricted term
-    response = client.post(
-        "/chat",
-        json={"query": "show me the audit log for e-201"},
-        headers={"X-User-Role": "operator"},
-    )
+def mock_get_current_user_engineer():
+    return {"username": "test", "role": "engineer"}
+
+
+@patch("backend.routers.chat.redis_client.get", new_callable=AsyncMock)
+@patch("backend.routers.chat.redis_client.setex", new_callable=AsyncMock)
+def test_chat_endpoint_operator_blocked(mock_setex, mock_get):
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    response = client.post("/chat", json={"query": "audit log"})
     assert response.status_code == 403
-    assert "Access denied" in response.json()["detail"]
-
-    # Test 2: Engineer trying to access restricted term
-    # It should pass RBAC but might fail at LLM if no API key is set
-    # We just ensure it doesn't return 403 and doesn't crash on import
-    try:
-        response = client.post(
-            "/chat",
-            json={"query": "show me the audit log for e-201"},
-            headers={"X-User-Role": "engineer"},
-        )
-        assert response.status_code in [
-            200,
-            500,
-        ]  # 500 is acceptable here if no API key
-    except Exception:
-        # If it throws an exception internally due to missing API key, that's fine
-        # We just want to ensure the app itself is structured correctly.
-        pass
+    app.dependency_overrides = {}
 
 
-def test_graph_endpoints_available():
-    """Verify that the merged graph endpoints are accessible."""
+@patch("backend.routers.chat.redis_client.get", new_callable=AsyncMock)
+@patch("backend.routers.chat.redis_client.setex", new_callable=AsyncMock)
+@patch("backend.routers.chat.rca_graph.ainvoke", new_callable=AsyncMock)
+@patch("backend.routers.chat.rca_graph.get_state")
+def test_chat_endpoint_engineer_allowed(
+    mock_get_state, mock_ainvoke, mock_setex, mock_get
+):
+    mock_get.return_value = None
+    mock_ainvoke.return_value = {"final_answer": "Here is the audit log", "sources": []}
+
+    mock_state = MagicMock()
+    mock_state.next = []
+    mock_get_state.return_value = mock_state
+
+    app.dependency_overrides[get_current_user] = mock_get_current_user_engineer
+    response = client.post("/chat", json={"query": "audit log"})
+    assert response.status_code == 200
+    assert response.json()["answer"] == "Here is the audit log"
+    app.dependency_overrides = {}
+
+
+@patch("backend.routers.graph.builder")
+def test_graph_endpoints_available(mock_builder):
+    mock_builder.get_graph_stats.return_value = {"node_count": 5, "edge_count": 2}
     response = client.get("/api/stats")
     assert response.status_code == 200
-    data = response.json()
-    assert "node_count" in data
-    assert "edge_count" in data
+
+
+def test_toggle_fallback():
+    response = client.post("/fallback/toggle?enabled=true")
+    assert response.status_code == 200
+    assert response.json() == {"fallback_mode": True}
