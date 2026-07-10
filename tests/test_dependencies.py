@@ -4,8 +4,33 @@ import pytest
 from unittest.mock import patch, mock_open, MagicMock
 from fastapi import HTTPException
 from jose import JWTError
-from backend.dependencies import compute_corpus_coverage, get_current_user, _JWKS_CACHE
+from backend.dependencies import (
+    compute_corpus_coverage,
+    get_current_user,
+    get_builder,
+    _JWKS_CACHE,
+)
+from backend.src.neo4j_builder import Neo4jBuilder
+from backend.src.graph_builder import KnowledgeGraphBuilder
 import backend.dependencies as deps
+
+
+def test_get_builder_success():
+    with patch("socket.socket") as mock_socket:
+        mock_instance = MagicMock()
+        mock_socket.return_value = mock_instance
+        builder = get_builder()
+        assert isinstance(builder, Neo4jBuilder)
+        mock_instance.connect.assert_called_with(("localhost", 7687))
+
+
+def test_get_builder_fallback():
+    with patch("socket.socket") as mock_socket:
+        mock_instance = MagicMock()
+        mock_instance.connect.side_effect = Exception("Connection refused")
+        mock_socket.return_value = mock_instance
+        builder = get_builder()
+        assert isinstance(builder, KnowledgeGraphBuilder)
 
 
 def test_compute_corpus_coverage_file_exists():

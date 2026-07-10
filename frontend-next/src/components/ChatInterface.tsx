@@ -110,37 +110,80 @@ export default function ChatInterface({ activeRole }: { activeRole: string }) {
 
     try {
       await fetchToken(activeRole);
-      const response = await api.post("/chat", {
-        query: userMsg.content,
-        role: activeRole,
-        image: userMsg.image
+      
+      const aiMsgId = (Date.now() + 1).toString();
+      const initialAiMsg: Message = {
+        id: aiMsgId,
+        role: 'assistant',
+        content: ""
+      };
+      setMessages(prev => [...prev, initialAiMsg]);
+
+      // Use fetch directly for streaming
+      const response = await fetch("http://localhost:8000/api/stream", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('token') || ''}`
+        },
+        body: JSON.stringify({
+          query: userMsg.content,
+          role: activeRole,
+          image: userMsg.image
+        })
       });
 
-      const data = response.data;
+      if (!response.ok) throw new Error("Stream failed");
       
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.answer || "No response generated.",
-        metrics: {
-          contradiction: data.contradiction_detected || false,
-          faithfulness: data.metrics?.faithfulness_score || 0,
-          sources: data.sources ? data.sources.map((s: any) => s.doc || s) : []
-        },
-        action: data.action_taken && data.action_taken !== "NONE" ? {
-          taken: data.action_taken,
-          result: data.action_result
-        } : undefined
-      };
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
       
-      setMessages(prev => [...prev, aiMsg]);
+      if (reader) {
+        let done = false;
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          if (value) {
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const event = JSON.parse(line.slice(6));
+                  
+                  setMessages(prev => prev.map(msg => {
+                    if (msg.id === aiMsgId) {
+                      const newContent = event.answer || msg.content || `[Agent Status]: Running step '${event.node}'...`;
+                      return {
+                        ...msg,
+                        content: newContent,
+                        metrics: event.answer ? {
+                          contradiction: event.contradiction_detected || false,
+                          faithfulness: event.faithfulness_score || 0,
+                          sources: event.sources ? event.sources.map((s: any) => s.doc || s) : []
+                        } : msg.metrics,
+                        action: event.action_taken && event.action_taken !== "NONE" ? {
+                          taken: event.action_taken,
+                          result: event.action_result
+                        } : msg.action
+                      };
+                    }
+                    return msg;
+                  }));
+                } catch (e) {
+                  console.error("Error parsing stream JSON", e);
+                }
+              }
+            }
+          }
+        }
+      }
     } catch (error) {
-      const errorMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: "Error connecting to the Industrial Brain API."
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      console.error(error);
+      setMessages(prev => prev.map(msg => 
+        msg.id === (Date.now() + 1).toString() ? { ...msg, content: "Error connecting to the Industrial Brain API." } : msg
+      ));
     } finally {
       setIsLoading(false);
     }

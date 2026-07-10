@@ -1,0 +1,21 @@
+# Tell GitHub Linguist to treat vendored/generated files as non-code
+# so they don't inflate language statistics
+
+# Vendored static libraries
+backend/static/lib/**  linguist-vendored
+backend/static/*.js    linguist-vendored
+backend/static/*.css   linguist-vendored
+
+# Minified files
+*.min.js               linguist-vendored
+*.min.css              linguist-vendored
+
+# Generated files
+frontend-next/.next/** linguist-generated
+frontend-next/playwright-report/** linguist-generated
+frontend-next/test-results/**      linguist-generated
+
+# Lock files
+*.lock                 linguist-generated
+package-lock.json      linguist-generated
+requirements.lock      linguist-generated

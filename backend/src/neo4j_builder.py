@@ -34,6 +34,37 @@ class Neo4jBuilder:
         # Local node cache for performance during build
         self._local_nodes = {}
 
+    @property
+    def G(self):
+        import networkx as nx
+
+        graph = nx.MultiDiGraph()
+        try:
+            nodes = self._execute_read("MATCH (n) RETURN n")
+            for record in nodes:
+                node = record["n"]
+                node_id = node.get("id")
+                if not node_id:
+                    continue
+                labels = list(node.labels)
+                label = labels[0] if labels else "UNKNOWN"
+                props = dict(node)
+                graph.add_node(node_id, label=label, **props)
+
+            edges = self._execute_read(
+                "MATCH (s)-[r]->(t) RETURN s.id AS source, t.id AS target, type(r) AS type, r AS props"
+            )
+            for record in edges:
+                source = record["source"]
+                target = record["target"]
+                edge_type = record["type"]
+                props = dict(record["props"])
+                props["type"] = edge_type
+                graph.add_edge(source, target, **props)
+        except Exception:
+            pass
+        return graph
+
     def close(self):
         self.driver.close()
 

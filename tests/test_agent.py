@@ -147,10 +147,15 @@ def test_synthesize(mock_generate):
         assert res["final_answer"] == "final answer"
 
 
+@patch("backend.src.agent.get_llm")
 @patch("sqlite3.connect")
-def test_execute_action_create_wo(mock_connect):
+def test_execute_action_create_wo(mock_connect, mock_get_llm):
     mock_cursor = MagicMock()
     mock_connect.return_value.cursor.return_value = mock_cursor
+
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.complete.return_value = '{"should_create_work_order": true, "equipment_id": "P-101", "priority": "High", "reason": "Test reason"}'
+    mock_get_llm.return_value = mock_llm_instance
 
     state = {
         "final_answer": "I recommend we create a work order for the pump.",
@@ -160,18 +165,29 @@ def test_execute_action_create_wo(mock_connect):
     assert res["action_taken"] == "CREATE_SAP_WO"
 
 
+@patch("backend.src.agent.get_llm")
 @patch("sqlite3.connect")
-def test_execute_action_create_wo_db_error(mock_connect):
+def test_execute_action_create_wo_db_error(mock_connect, mock_get_llm):
     mock_cursor = MagicMock()
     mock_cursor.execute.side_effect = sqlite3.Error("DB error")
     mock_connect.return_value.cursor.return_value = mock_cursor
 
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.complete.return_value = '{"should_create_work_order": true, "equipment_id": "P-101", "priority": "High", "reason": "Test reason"}'
+    mock_get_llm.return_value = mock_llm_instance
+
     state = {"final_answer": "I recommend we create a work order.", "query": "q"}
     res = execute_action(state)
-    assert res["action_taken"] == "CREATE_SAP_WO_FAILED"
+    # the new logic traps the error and returns NONE
+    assert res["action_taken"] == "NONE"
 
 
-def test_execute_action_none():
+@patch("backend.src.agent.get_llm")
+def test_execute_action_none(mock_get_llm):
+    mock_llm_instance = MagicMock()
+    mock_llm_instance.complete.return_value = '{"should_create_work_order": false}'
+    mock_get_llm.return_value = mock_llm_instance
+
     state = {"final_answer": "Everything is fine."}
     res = execute_action(state)
     assert res["action_taken"] == "NONE"

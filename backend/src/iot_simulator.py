@@ -20,6 +20,8 @@ def simulate_iot_data():
 
     # We want P-101 to slowly degrade into a critical vibration state over time
     tick = 0
+    history = {eq: [] for eq in equipment_state}
+    CRITICAL_VIB_THRESHOLD = 12.0
 
     while True:
         tick += 1
@@ -33,7 +35,7 @@ def simulate_iot_data():
                 equipment_state[eq]["vibration_mms"] += random.uniform(-0.1, 0.4)
                 if equipment_state[eq]["vibration_mms"] > 8.0:
                     equipment_state[eq]["status"] = "WARNING"
-                if equipment_state[eq]["vibration_mms"] > 12.0:
+                if equipment_state[eq]["vibration_mms"] > CRITICAL_VIB_THRESHOLD:
                     equipment_state[eq]["status"] = "CRITICAL"
             else:
                 equipment_state[eq]["vibration_mms"] += random.uniform(-0.1, 0.1)
@@ -42,16 +44,36 @@ def simulate_iot_data():
             if equipment_state[eq]["vibration_mms"] < 0:
                 equipment_state[eq]["vibration_mms"] = 0.1
 
+            # Maintain history for prediction
+            history[eq].append(equipment_state[eq]["vibration_mms"])
+            if len(history[eq]) > 10:
+                history[eq].pop(0)
+
+            # Calculate prediction (linear extrapolation)
+            if len(history[eq]) >= 5:
+                delta = history[eq][-1] - history[eq][0]
+                rate_per_sec = delta / len(history[eq])
+                if (
+                    rate_per_sec > 0.01
+                    and equipment_state[eq]["vibration_mms"] < CRITICAL_VIB_THRESHOLD
+                ):
+                    time_to_crit = (
+                        CRITICAL_VIB_THRESHOLD - equipment_state[eq]["vibration_mms"]
+                    ) / rate_per_sec
+                    equipment_state[eq]["predicted_time_to_critical_sec"] = round(
+                        time_to_crit, 1
+                    )
+                else:
+                    equipment_state[eq]["predicted_time_to_critical_sec"] = -1
+
         payload = {
             "timestamp": datetime.now().isoformat(),
             "equipment": equipment_state,
         }
 
         # Write to JSON safely
-        temp_file = IOT_DATA_FILE + ".tmp"
-        with open(temp_file, "w") as f:
+        with open(IOT_DATA_FILE, "w") as f:
             json.dump(payload, f, indent=4)
-        os.replace(temp_file, IOT_DATA_FILE)
 
         time.sleep(1)
 

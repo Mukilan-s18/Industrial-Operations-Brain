@@ -21,9 +21,9 @@ export default function KnowledgeGraph({ activeRole }: { activeRole: string }) {
   const [nodeId, setNodeId] = useState("");
   const [query, setQuery] = useState("");
   
-  const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+  const [graphData, setGraphData] = useState<{ nodes: any[], links: any[] }>({ nodes: [], links: [] });
   const [isLoading, setIsLoading] = useState(true);
-  const fgRef = useRef<any>();
+  const fgRef = useRef<any>(null);
 
   useEffect(() => {
     const fetchGraphData = async () => {

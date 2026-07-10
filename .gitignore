@@ -22,3 +22,11 @@ frontend-next/node_modules/
 venv/
 .venv_new/
 .venv_new/
+
+# Playwright Test Outputs
+frontend-next/playwright-report/
+frontend-next/test-results/
+
+
+# Legacy root-level lib folder (duplicate of backend/static/lib)
+lib/

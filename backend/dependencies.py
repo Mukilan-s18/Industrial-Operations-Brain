@@ -9,13 +9,31 @@ from jose import JWTError, jwt
 import requests
 from backend.src.ner_pipeline import NERPipeline
 from backend.src.neo4j_builder import Neo4jBuilder
+from backend.src.graph_builder import KnowledgeGraphBuilder
 from backend.src.agent import build_rca_graph
+import socket
 
 logger = structlog.get_logger(__name__)
 
 # Initialize singletons
 ner = NERPipeline()
-builder = Neo4jBuilder()
+
+
+def get_builder():
+    try:
+        s = socket.socket()
+        s.settimeout(1)
+        s.connect(("localhost", 7687))
+        s.close()
+        return Neo4jBuilder()
+    except Exception:
+        logger.warning(
+            "Neo4j not available, falling back to local KnowledgeGraphBuilder"
+        )
+        return KnowledgeGraphBuilder()
+
+
+builder = get_builder()
 _JWKS_CACHE = None
 
 # Load docs and build graph
