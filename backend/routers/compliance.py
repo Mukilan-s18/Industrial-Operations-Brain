@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, Query
-from backend.dependencies import builder, ner, get_current_user
+
+from backend.dependencies import builder, get_current_user, ner
 
 router = APIRouter()
 
 
 @router.get("/api/compliance-gaps")
 def get_compliance_gaps(
-    date: str = None, current_user: dict = Depends(get_current_user)
+    date: str | None = None, current_user: dict = Depends(get_current_user)
 ):
     role = current_user["role"]
     if role and "operator" in role.lower():

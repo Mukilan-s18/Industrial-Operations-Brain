@@ -1,6 +1,8 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, AsyncMock, MagicMock
+
 from backend.app import app
 from backend.dependencies import get_current_user
 

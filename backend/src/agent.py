@@ -4,24 +4,26 @@ Orchestrates multi-step reasoning: Query Rewriting -> Retrieve Work Orders -> Re
 Returns structured results with real metrics.
 """
 
-import os
-import time
 import json
+import os
 import sqlite3
+import time
+from typing import Any, TypedDict
+
 import structlog
-from typing import TypedDict, Any
-from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
-from llama_index.llms.google_genai import GoogleGenAI
+from langgraph.graph import END, StateGraph
 from llama_index.core import QueryBundle
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.google_genai import GoogleGenAI
+
 from backend.settings import settings
 
 logger = structlog.get_logger(__name__)
 
-from backend.src.retriever import HybridGraphRetriever
-from backend.src.generator import generate_answer, GenerationResult
+from backend.src.generator import GenerationResult, generate_answer
 from backend.src.llm_utils import RateLimitedLLM
+from backend.src.retriever import HybridGraphRetriever
 
 
 class RCAState(TypedDict):

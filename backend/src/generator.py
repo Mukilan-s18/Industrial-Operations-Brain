@@ -3,12 +3,14 @@ Day 3 & 4: Answer Generator with REAL Contradiction Detection, Citation formatti
 and Faithfulness scoring.
 """
 
-from dataclasses import dataclass, field
-from llama_index.llms.google_genai import GoogleGenAI
-from llama_index.core.schema import NodeWithScore
-from backend.src.llm_utils import RateLimitedLLM
-import requests
 import os
+from dataclasses import dataclass, field
+
+import requests
+from llama_index.core.schema import NodeWithScore
+from llama_index.llms.google_genai import GoogleGenAI
+
+from backend.src.llm_utils import RateLimitedLLM
 
 
 @dataclass
@@ -187,7 +189,7 @@ def generate_answer(
     nodes: list[NodeWithScore],
     llm: GoogleGenAI,
     mode: str = "detailed",
-    image_b64: str = None,
+    image_b64: str | None = None,
 ) -> GenerationResult:
     """Generate final answer with citations, contradiction detection, and faithfulness scoring."""
     safe_llm = RateLimitedLLM(llm)

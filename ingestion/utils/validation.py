@@ -40,7 +40,7 @@ def detect_mime_type(file_path: Path) -> str:
         return mime or "application/octet-stream"
 
 
-def validate_file(file_path: Path) -> Tuple[bool, str]:
+def validate_file(file_path: Path) -> tuple[bool, str]:
     """
     Validate a file for ingestion.
 

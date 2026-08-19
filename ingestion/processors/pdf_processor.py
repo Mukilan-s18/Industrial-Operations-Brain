@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 TEXT_THRESHOLD = 30
 
 
-def classify_doc_type(pages: List[PageResult]) -> DocType:
+def classify_doc_type(pages: list[PageResult]) -> DocType:
     """Classify the document type based on page content."""
     if not pages:
         return DocType.TEXT
@@ -42,14 +42,14 @@ def classify_doc_type(pages: List[PageResult]) -> DocType:
     return DocType.TEXT
 
 
-def extract_pdf(file_path: Path) -> tuple[List[PageResult], DocType]:
+def extract_pdf(file_path: Path) -> tuple[list[PageResult], DocType]:
     """
     Extract text and tables from a PDF file.
 
     Returns:
         (pages, doc_type) where pages is a list of PageResult objects
     """
-    pages: List[PageResult] = []
+    pages: list[PageResult] = []
 
     try:
         doc = fitz.open(str(file_path))

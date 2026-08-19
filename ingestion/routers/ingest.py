@@ -10,14 +10,13 @@ import tempfile
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, Request
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 from ingestion.models.schemas import (
     DocumentMetadata,
     IngestionResult,
 )
-from ingestion.utils.pipeline import run_extraction_pipeline
 from ingestion.utils.deduplication import (
     check_duplicate,
     register_document,
@@ -29,6 +28,7 @@ from ingestion.utils.metadata import (
     extract_revision,
     normalize_document_title,
 )
+from ingestion.utils.pipeline import run_extraction_pipeline
 from ingestion.utils.task_manager import (
     TaskStatus,
     get_task_status,

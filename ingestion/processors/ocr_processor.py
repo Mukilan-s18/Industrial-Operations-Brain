@@ -3,10 +3,10 @@ OCR Processor: Converts PDF image pages to text using Tesseract.
 Pre-processes images with OpenCV for better accuracy on industrial docs.
 """
 
+import concurrent.futures
 import logging
 from io import BytesIO
 from typing import Optional
-import concurrent.futures
 
 import cv2
 import numpy as np
@@ -92,7 +92,7 @@ def ocr_page(fitz_page, page_num: int) -> PageResult:
     """
     warnings = []
     text = ""
-    confidence: Optional[float] = None
+    confidence: float | None = None
     is_handwriting_flagged = False
 
     try:

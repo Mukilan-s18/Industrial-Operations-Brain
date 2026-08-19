@@ -8,6 +8,7 @@ import logging
 import time
 from enum import Enum
 from pathlib import Path
+
 from backend.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -32,7 +33,10 @@ def run_ingestion_async(
     Run full ingestion in a Celery background task.
     Updates the task state in-place as processing proceeds.
     """
-    from ingestion.utils.pipeline import run_extraction_pipeline
+    from ingestion.models.schemas import (
+        DocumentMetadata,
+        IngestionResult,
+    )
     from ingestion.utils.deduplication import register_document
     from ingestion.utils.language import detect_language
     from ingestion.utils.metadata import (
@@ -40,10 +44,7 @@ def run_ingestion_async(
         extract_equipment_ids,
         extract_revision,
     )
-    from ingestion.models.schemas import (
-        DocumentMetadata,
-        IngestionResult,
-    )
+    from ingestion.utils.pipeline import run_extraction_pipeline
 
     tmp_path = Path(tmp_path_str)
     start_time = time.perf_counter()
@@ -95,7 +96,7 @@ def run_ingestion_async(
     except Exception as e:
         logger.error(f"Task failed: {e}")
         # Raising an exception will make the task FAILED in celery
-        raise e
+        raise
     finally:
         try:
             if tmp_path.exists():

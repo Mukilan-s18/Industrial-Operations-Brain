@@ -30,7 +30,7 @@ def test_pdf_extraction_returns_text():
         "Standard Operating Procedure Rev. 4\nP-101 valve inspection"
     )
     try:
-        pages, doc_type = extract_pdf(pdf_path)
+        pages, _doc_type = extract_pdf(pdf_path)
         full_text = " ".join(p.text for p in pages)
         assert len(full_text.strip()) > 0, "Extracted text should not be empty"
     finally:
@@ -85,14 +85,14 @@ def test_document_deduplication():
     """Same file uploaded twice should be detected as duplicate."""
     from ingestion.utils.deduplication import (
         check_duplicate,
-        register_document,
         clear_registry,
+        register_document,
     )
 
     clear_registry()
     pdf_path = _create_simple_pdf("Test document for deduplication check")
     try:
-        is_dup, file_hash, existing_id = check_duplicate(pdf_path)
+        is_dup, file_hash, _existing_id = check_duplicate(pdf_path)
         assert not is_dup, "First check should not be a duplicate"
 
         register_document(file_hash, file_hash, "test.pdf")

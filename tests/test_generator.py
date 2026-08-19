@@ -1,12 +1,14 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+from llama_index.core.schema import Document, NodeWithScore
+
 from backend.src.generator import (
+    GenerationResult,
     check_contradictions,
     compute_faithfulness,
     generate_answer,
-    GenerationResult,
 )
-from llama_index.core.schema import NodeWithScore, Document
 
 
 def test_check_contradictions_less_than_two_nodes():

@@ -41,12 +41,12 @@ def _df_to_markdown(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def extract_excel(file_path: Path) -> List[PageResult]:
+def extract_excel(file_path: Path) -> list[PageResult]:
     """
     Extract all sheets from an Excel file.
     Each sheet becomes a PageResult (with tables list).
     """
-    pages: List[PageResult] = []
+    pages: list[PageResult] = []
 
     try:
         xl = pd.ExcelFile(str(file_path))

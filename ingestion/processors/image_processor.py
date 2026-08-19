@@ -8,9 +8,9 @@ import os
 from io import BytesIO
 from typing import List
 
-from PIL import Image
-from dotenv import load_dotenv
 import google.generativeai as genai
+from dotenv import load_dotenv
+from PIL import Image
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -21,12 +21,12 @@ if api_key:
     genai.configure(api_key=api_key)
 
 
-def extract_image_text_from_pdf(fitz_page) -> List[str]:
+def extract_image_text_from_pdf(fitz_page) -> list[str]:
     """
     Extract text and structured tags from all images embedded in a PDF page.
     Uses Gemini 1.5 Flash (Multimodal) for P&ID drawings.
     """
-    extracted_texts: List[str] = []
+    extracted_texts: list[str] = []
 
     if not api_key:
         logger.warning("GOOGLE_API_KEY not set. Skipping Gemini multimodal extraction.")

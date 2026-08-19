@@ -1,14 +1,16 @@
 import os
 import re
-import yaml
+from typing import Any, Dict, List
+
 import spacy
+import yaml
 from rapidfuzz import fuzz
-from typing import List, Dict, Any
+
 from backend.src.schema import ExtractedEntity
 
 
 class NERPipeline:
-    def __init__(self, spacy_model: str = "en_core_web_sm", config_path: str = None):
+    def __init__(self, spacy_model: str = "en_core_web_sm", config_path: str | None = None):
         self.nlp = spacy.load(spacy_model)
 
         # Load config dynamically
@@ -46,7 +48,7 @@ class NERPipeline:
         self,
         raw_text: str,
         label: str,
-        existing_ids: List[str],
+        existing_ids: list[str],
         threshold: float = 90.0,
     ) -> str:
         """
@@ -100,8 +102,8 @@ class NERPipeline:
         return normalized
 
     def extract_entities(
-        self, text: str, existing_ids: List[str] = None
-    ) -> List[ExtractedEntity]:
+        self, text: str, existing_ids: list[str] | None = None
+    ) -> list[ExtractedEntity]:
         if existing_ids is None:
             existing_ids = []
 
@@ -193,7 +195,7 @@ class NERPipeline:
 
         return extracted
 
-    def evaluate_accuracy(self, labeled_sentences_path: str = None) -> Dict[str, Any]:
+    def evaluate_accuracy(self, labeled_sentences_path: str | None = None) -> dict[str, Any]:
         """
         Loads the labeled sentences, extracts entities, and calculates precision,
         recall, and F1 score.
@@ -233,8 +235,8 @@ class NERPipeline:
 
             extracted = self.extract_entities(sentence)
 
-            gt_set = set((gt["text"], gt["label"]) for gt in gt_ents)
-            ext_set = set((ent.id, ent.label) for ent in extracted)
+            gt_set = {(gt["text"], gt["label"]) for gt in gt_ents}
+            ext_set = {(ent.id, ent.label) for ent in extracted}
 
             tp_set = gt_set.intersection(ext_set)
             fp_set = ext_set - gt_set

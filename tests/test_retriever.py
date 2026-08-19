@@ -1,7 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+from llama_index.core.schema import Document, NodeWithScore
+
 from backend.src.retriever import HybridGraphRetriever
-from llama_index.core.schema import NodeWithScore, Document
 
 
 def test_hybrid_graph_retriever_operator_filter():
@@ -119,18 +121,17 @@ def test_hybrid_graph_retriever_graph_integration():
 
 def test_pgvector_exception_handling():
     mock_embed = MagicMock()
-    with patch("backend.src.retriever.make_url"):
-        with patch(
-            "backend.src.retriever.PGVectorStore.from_params",
-            side_effect=Exception("DB Error"),
-        ):
-            retriever = HybridGraphRetriever(
-                collection_names=["docs"], embed_model=mock_embed, role="engineer"
-            )
-            retriever.builder = None
-            nodes = retriever._retrieve(MagicMock())
-            # Should return empty list, handled by try-except
-            assert len(nodes) == 0
+    with patch("backend.src.retriever.make_url"), patch(
+        "backend.src.retriever.PGVectorStore.from_params",
+        side_effect=Exception("DB Error"),
+    ):
+        retriever = HybridGraphRetriever(
+            collection_names=["docs"], embed_model=mock_embed, role="engineer"
+        )
+        retriever.builder = None
+        nodes = retriever._retrieve(MagicMock())
+        # Should return empty list, handled by try-except
+        assert len(nodes) == 0
 
 
 def test_query_graph_neighbors_operator_blocked_regulation():

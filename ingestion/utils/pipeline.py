@@ -1,12 +1,13 @@
 import json
 from pathlib import Path
-from typing import Tuple, List
+from typing import List, Tuple
+
 from ingestion.models.schemas import DocType, PageResult
 
 
 def run_extraction_pipeline(
     tmp_path: Path, category: str
-) -> Tuple[List[PageResult], DocType, List[str]]:
+) -> tuple[list[PageResult], DocType, list[str]]:
     warnings = []
 
     if category == "pdf":

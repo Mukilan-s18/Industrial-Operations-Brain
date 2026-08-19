@@ -1,17 +1,18 @@
-import os
 import json
-import structlog
+import os
+import socket
 
-from backend.settings import settings
+import requests
+import structlog
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-import requests
-from backend.src.ner_pipeline import NERPipeline
-from backend.src.neo4j_builder import Neo4jBuilder
-from backend.src.graph_builder import KnowledgeGraphBuilder
+
+from backend.settings import settings
 from backend.src.agent import build_rca_graph
-import socket
+from backend.src.graph_builder import KnowledgeGraphBuilder
+from backend.src.neo4j_builder import Neo4jBuilder
+from backend.src.ner_pipeline import NERPipeline
 
 logger = structlog.get_logger(__name__)
 

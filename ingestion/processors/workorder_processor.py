@@ -78,7 +78,7 @@ EQUIPMENT_ID_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9\-]{1,19}$")
 def _normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
     """Map raw column names to standard schema names."""
     col_lower = {col: col.strip().lower() for col in df.columns}
-    rename_map: Dict[str, str] = {}
+    rename_map: dict[str, str] = {}
 
     for standard, variants in COLUMN_MAP.items():
         for raw_col, lower_col in col_lower.items():
@@ -89,7 +89,7 @@ def _normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
     return df.rename(columns=rename_map)
 
 
-def _normalize_equipment_id(raw_id: Any) -> Optional[str]:
+def _normalize_equipment_id(raw_id: Any) -> str | None:
     """
     Normalize equipment ID:
     - Strip whitespace
@@ -103,7 +103,7 @@ def _normalize_equipment_id(raw_id: Any) -> Optional[str]:
     return normalized
 
 
-def extract_work_orders(file_path: Path) -> List[Dict[str, Any]]:
+def extract_work_orders(file_path: Path) -> list[dict[str, Any]]:
     """
     Parse work order records from CSV or Excel.
 
@@ -111,7 +111,7 @@ def extract_work_orders(file_path: Path) -> List[Dict[str, Any]]:
         List of standardized work order dicts ready for knowledge graph linking.
     """
     ext = file_path.suffix.lower()
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
 
     try:
         if ext == ".csv":
@@ -149,7 +149,7 @@ def extract_work_orders(file_path: Path) -> List[Dict[str, Any]]:
             )
             requires_review = True
 
-        record: Dict[str, Any] = {
+        record: dict[str, Any] = {
             "equipment_id": equipment_id,
             "failure_type": str(row.get("failure_type", "")).strip() or None,
             "date": str(row.get("date", "")).strip() or None,

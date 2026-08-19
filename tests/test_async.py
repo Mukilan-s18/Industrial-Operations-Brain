@@ -6,8 +6,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def test_should_process_async_small_file():
-    from ingestion.utils.task_manager import should_process_async
     import fitz
+
+    from ingestion.utils.task_manager import should_process_async
 
     doc = fitz.open()
     page = doc.new_page()
@@ -23,8 +24,9 @@ def test_should_process_async_small_file():
 
 
 def test_get_task_status_mock():
-    from ingestion.utils.task_manager import get_task_status, TaskStatus
     from unittest.mock import patch
+
+    from ingestion.utils.task_manager import TaskStatus, get_task_status
 
     with patch("celery.result.AsyncResult") as mock_result:
         mock_result.return_value.state = "PENDING"

@@ -1,25 +1,26 @@
-import time
-import json
 import asyncio
+import json
+import time
 import uuid
-from fastapi import APIRouter, Header, HTTPException, Request, Depends
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 limiter = Limiter(key_func=get_remote_address)
 
+import redis.asyncio as redis
+
+from backend.dependencies import (
+    CORPUS_COVERAGE_PCT,
+    builder,
+    get_current_user,
+    rca_graph,
+)
 from backend.settings import settings
 from backend.src.fallback import get_fallback
-import redis.asyncio as redis
-from backend.dependencies import (
-    rca_graph,
-    builder,
-    CORPUS_COVERAGE_PCT,
-    get_current_user,
-)
 
 router = APIRouter()
 
@@ -36,9 +37,7 @@ class DummyRedis:
 
     async def scan_iter(self, match):
         for k in list(self.cache.keys()):
-            if match.endswith("*") and k.startswith(match[:-1]):
-                yield k
-            elif k == match:
+            if match.endswith("*") and k.startswith(match[:-1]) or k == match:
                 yield k
 
     async def delete(self, key):

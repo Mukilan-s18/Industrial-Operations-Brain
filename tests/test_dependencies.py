@@ -1,18 +1,20 @@
-import os
 import json
+import os
+from unittest.mock import MagicMock, mock_open, patch
+
 import pytest
-from unittest.mock import patch, mock_open, MagicMock
 from fastapi import HTTPException
 from jose import JWTError
-from backend.dependencies import (
-    compute_corpus_coverage,
-    get_current_user,
-    get_builder,
-    _JWKS_CACHE,
-)
-from backend.src.neo4j_builder import Neo4jBuilder
-from backend.src.graph_builder import KnowledgeGraphBuilder
+
 import backend.dependencies as deps
+from backend.dependencies import (
+    _JWKS_CACHE,
+    compute_corpus_coverage,
+    get_builder,
+    get_current_user,
+)
+from backend.src.graph_builder import KnowledgeGraphBuilder
+from backend.src.neo4j_builder import Neo4jBuilder
 
 
 def test_get_builder_success():
@@ -63,10 +65,9 @@ def test_get_current_user_local_mock_domain():
         side_effect=lambda k, d=None: (
             "mock-domain.auth0.com" if k == "AUTH0_DOMAIN" else d
         ),
-    ):
-        with patch("backend.dependencies.jwt.decode", return_value=mock_payload):
-            user = get_current_user(token)
-            assert user == {"username": "test_user", "role": "operator"}
+    ), patch("backend.dependencies.jwt.decode", return_value=mock_payload):
+        user = get_current_user(token)
+        assert user == {"username": "test_user", "role": "operator"}
 
 
 def test_get_current_user_missing_role():
@@ -77,11 +78,10 @@ def test_get_current_user_missing_role():
         side_effect=lambda k, d=None: (
             "mock-domain.auth0.com" if k == "AUTH0_DOMAIN" else d
         ),
-    ):
-        with patch("backend.dependencies.jwt.decode", return_value=mock_payload):
-            with pytest.raises(HTTPException) as exc_info:
-                get_current_user(token)
-            assert exc_info.value.status_code == 401
+    ), patch("backend.dependencies.jwt.decode", return_value=mock_payload):
+        with pytest.raises(HTTPException) as exc_info:
+            get_current_user(token)
+        assert exc_info.value.status_code == 401
 
 
 def test_get_current_user_auth0_flow_success():
@@ -94,21 +94,19 @@ def test_get_current_user_auth0_flow_success():
     with patch(
         "os.getenv",
         side_effect=lambda k, d=None: "real.auth0.com" if k == "AUTH0_DOMAIN" else d,
-    ):
-        with patch("backend.dependencies.requests.get") as mock_get:
-            mock_get.return_value.json.return_value = mock_jwks
-            with patch(
-                "backend.dependencies.jwt.get_unverified_header",
-                return_value={"kid": "123"},
-            ):
-                with patch(
-                    "backend.dependencies.jwt.decode", return_value=mock_payload
-                ):
-                    # Force JWKS CACHE None to test fetch
-                    deps._JWKS_CACHE = None
-                    user = get_current_user(token)
-                    assert user == {"username": "test_user", "role": "engineer"}
-                    assert deps._JWKS_CACHE == mock_jwks
+    ), patch("backend.dependencies.requests.get") as mock_get:
+        mock_get.return_value.json.return_value = mock_jwks
+        with patch(
+            "backend.dependencies.jwt.get_unverified_header",
+            return_value={"kid": "123"},
+        ), patch(
+            "backend.dependencies.jwt.decode", return_value=mock_payload
+        ):
+            # Force JWKS CACHE None to test fetch
+            deps._JWKS_CACHE = None
+            user = get_current_user(token)
+            assert user == {"username": "test_user", "role": "engineer"}
+            assert deps._JWKS_CACHE == mock_jwks
 
 
 def test_get_current_user_auth0_flow_key_not_found():
@@ -120,14 +118,13 @@ def test_get_current_user_auth0_flow_key_not_found():
     with patch(
         "os.getenv",
         side_effect=lambda k, d=None: "real.auth0.com" if k == "AUTH0_DOMAIN" else d,
-    ):
-        with patch("backend.dependencies.requests.get") as mock_get:
-            mock_get.return_value.json.return_value = mock_jwks
-            with patch(
-                "backend.dependencies.jwt.get_unverified_header",
-                return_value={"kid": "123"},
-            ):
-                deps._JWKS_CACHE = None
-                with pytest.raises(HTTPException) as exc_info:
-                    get_current_user(token)
-                assert exc_info.value.status_code == 401
+    ), patch("backend.dependencies.requests.get") as mock_get:
+        mock_get.return_value.json.return_value = mock_jwks
+        with patch(
+            "backend.dependencies.jwt.get_unverified_header",
+            return_value={"kid": "123"},
+        ):
+            deps._JWKS_CACHE = None
+            with pytest.raises(HTTPException) as exc_info:
+                get_current_user(token)
+            assert exc_info.value.status_code == 401

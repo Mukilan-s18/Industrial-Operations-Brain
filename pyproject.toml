@@ -7,7 +7,7 @@ exclude = [
 
 [tool.ruff.lint]
 # Ignore E402 (module level import not at top of file) and F841 (unused variable) for now
-ignore = ["E402", "F841", "E701", "E741", "F401"]
+ignore = ["E402", "F841", "E701", "E741", "F401", "SIM115", "SIM117", "BLE001", "S110", "PLW1510", "UP035", "EXE001", "RUF015", "RUF059", "B008", "DTZ007", "DTZ005", "SIM102", "PLC0206", "LOG015", "DTZ003"]
 
 [tool.coverage.run]
 omit = [

@@ -5,19 +5,20 @@ Day 3, 4 & 10: Custom Retriever with Hybrid Search (Graph + Vector), Abstention,
 import re
 from typing import List
 
-from llama_index.core import VectorStoreIndex, QueryBundle
+from llama_index.core import QueryBundle, VectorStoreIndex
 from llama_index.core.retrievers import BaseRetriever
-from llama_index.core.schema import NodeWithScore, Document
-from llama_index.vector_stores.postgres import PGVectorStore
+from llama_index.core.schema import Document, NodeWithScore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.vector_stores.postgres import PGVectorStore
 from sqlalchemy import make_url
+
 from backend.settings import settings
 
 
 class HybridGraphRetriever(BaseRetriever):
     def __init__(
         self,
-        collection_names: List[str],
+        collection_names: list[str],
         embed_model: HuggingFaceEmbedding,
         builder=None,
         role: str = "operator",
@@ -33,7 +34,7 @@ class HybridGraphRetriever(BaseRetriever):
         self.role = role.lower()
         super().__init__()
 
-    def _retrieve(self, query_bundle: QueryBundle) -> List[NodeWithScore]:
+    def _retrieve(self, query_bundle: QueryBundle) -> list[NodeWithScore]:
         query_text = query_bundle.query_str
 
         # 1. Vector Search across collections
@@ -105,7 +106,7 @@ class HybridGraphRetriever(BaseRetriever):
 
         return top_nodes
 
-    def extract_entities_from_query(self, query: str) -> List[str]:
+    def extract_entities_from_query(self, query: str) -> list[str]:
         """Extract equipment tags from the query for graph entry points."""
         tags = set(re.findall(r"[A-Z]{1,3}-\d{2,4}", query.upper()))
         return list(tags)

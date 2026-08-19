@@ -4,8 +4,9 @@ This script demonstrates the capability to migrate the in-memory NetworkX graph
 to an enterprise-grade Neo4j database, proving the architecture scales beyond the hackathon.
 """
 
-import os
 import json
+import os
+
 import networkx as nx
 
 GRAPH_FILE = os.path.abspath(

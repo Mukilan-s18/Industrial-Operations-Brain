@@ -1,6 +1,8 @@
-import pytest
 import time
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from backend.src.llm_utils import RateLimitedLLM
 
 

@@ -1,4 +1,5 @@
 import pytest
+
 from backend.src.ner_pipeline import NERPipeline
 
 

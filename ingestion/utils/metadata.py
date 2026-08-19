@@ -33,7 +33,7 @@ DATE_PATTERNS = [
 EQUIPMENT_ID_PATTERN = re.compile(r"\b([A-Z]{1,4}-\d{1,4}[A-Z]?)\b")
 
 
-def extract_revision(text: str, max_pages: int = 3) -> Optional[str]:
+def extract_revision(text: str, max_pages: int = 3) -> str | None:
     """
     Search for revision number in text (scoped to first few pages).
     Returns the highest revision number found.
@@ -53,7 +53,7 @@ def extract_revision(text: str, max_pages: int = 3) -> Optional[str]:
         return found_revs[0]
 
 
-def extract_date(text: str) -> Optional[str]:
+def extract_date(text: str) -> str | None:
     """Extract the first recognizable date from text."""
     for pattern in DATE_PATTERNS:
         match = pattern.search(text)
@@ -62,7 +62,7 @@ def extract_date(text: str) -> Optional[str]:
     return None
 
 
-def extract_equipment_ids(text: str) -> List[str]:
+def extract_equipment_ids(text: str) -> list[str]:
     """Extract all equipment IDs (e.g., P-101, HV-204) from text."""
     matches = EQUIPMENT_ID_PATTERN.findall(text)
     # Deduplicate and sort

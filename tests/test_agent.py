@@ -1,22 +1,24 @@
-import pytest
-import os
 import json
+import os
 import sqlite3
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import MagicMock, mock_open, patch
+
+import pytest
+
 from backend.src.agent import (
+    _embed_model,
+    build_rca_graph,
+    check_live_sensors,
+    check_safety,
+    execute_action,
     get_embed_model,
     get_llm,
     get_retriever,
     input_guardrail,
-    check_safety,
-    rewrite_query,
-    check_live_sensors,
-    retrieve_work_orders,
     retrieve_sops,
+    retrieve_work_orders,
+    rewrite_query,
     synthesize,
-    execute_action,
-    build_rca_graph,
-    _embed_model,
 )
 
 

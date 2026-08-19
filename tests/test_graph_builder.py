@@ -1,8 +1,10 @@
-import pytest
-import os
 import json
+import os
+from unittest.mock import MagicMock, mock_open, patch
+
 import networkx as nx
-from unittest.mock import MagicMock, patch, mock_open
+import pytest
+
 from backend.src.graph_builder import KnowledgeGraphBuilder
 
 
@@ -70,7 +72,7 @@ def test_add_edge(builder):
     # Increment weight
     builder.add_edge("N1", "N2", "CONNECTED")
     edges = builder.G["N1"]["N2"]
-    edge_key = list(edges.keys())[0]
+    edge_key = next(iter(edges.keys()))
     assert edges[edge_key]["weight"] == 2
 
 
@@ -213,10 +215,9 @@ def test_get_graph_stats(builder):
 def test_save_load_graph(builder):
     builder.add_node("P-101", "EQUIPMENT")
 
-    with patch("os.makedirs"):
-        with patch("builtins.open", mock_open()) as m:
-            builder.save_graph("test.json")
-            m.assert_called_once()
+    with patch("os.makedirs"), patch("builtins.open", mock_open()) as m:
+        builder.save_graph("test.json")
+        m.assert_called_once()
 
     mock_data = json.dumps(nx.node_link_data(builder.G))
     with patch("builtins.open", mock_open(read_data=mock_data)):

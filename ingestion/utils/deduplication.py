@@ -13,11 +13,11 @@ from ingestion.utils.metadata import compute_file_hash
 logger = logging.getLogger(__name__)
 
 # In-memory registry: hash -> (doc_id, source_filename)
-_registry: Dict[str, Tuple[str, str]] = {}
+_registry: dict[str, tuple[str, str]] = {}
 _lock = Lock()
 
 
-def check_duplicate(file_path: Path) -> Tuple[bool, str, Optional[str]]:
+def check_duplicate(file_path: Path) -> tuple[bool, str, str | None]:
     """
     Check if a file has already been ingested.
 

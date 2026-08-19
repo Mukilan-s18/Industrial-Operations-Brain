@@ -1,6 +1,8 @@
-import pytest
 import os
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from backend.src.neo4j_builder import Neo4jBuilder
 
 

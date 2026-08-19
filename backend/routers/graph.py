@@ -1,10 +1,11 @@
 import os
-from fastapi import APIRouter, Query, HTTPException
-from fastapi.responses import HTMLResponse
 
-from backend.settings import settings
-from backend.dependencies import builder
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import HTMLResponse
 from pyvis.network import Network
+
+from backend.dependencies import builder
+from backend.settings import settings
 
 router = APIRouter()
 

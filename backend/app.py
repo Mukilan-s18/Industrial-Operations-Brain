@@ -4,20 +4,21 @@ Refactored into modular routers.
 """
 
 import os
+
 import structlog
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.sdk.resources import Resource
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+from backend.dependencies import CORPUS_COVERAGE_PCT, builder, rca_graph
+from backend.routers import auth, chat, compliance, graph
 from backend.settings import settings
-from backend.dependencies import CORPUS_COVERAGE_PCT, rca_graph, builder
-from backend.routers import chat, graph, compliance, auth
 
 try:
     import phoenix as px

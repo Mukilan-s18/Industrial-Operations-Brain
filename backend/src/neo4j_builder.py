@@ -1,16 +1,17 @@
-import yaml
+import os
 import re
 from datetime import datetime
-from typing import List, Dict, Any, Tuple
-import os
-from rapidfuzz import fuzz
+from typing import Any, Dict, List, Tuple
+
+import yaml
 from neo4j import GraphDatabase
+from rapidfuzz import fuzz
 
 from backend.settings import settings
 
 
 class Neo4jBuilder:
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str | None = None):
         self.driver = GraphDatabase.driver(
             settings.neo4j_uri, auth=(settings.neo4j_user, settings.neo4j_password)
         )
@@ -68,11 +69,11 @@ class Neo4jBuilder:
     def close(self):
         self.driver.close()
 
-    def _execute_write(self, query: str, parameters: dict = None):
+    def _execute_write(self, query: str, parameters: dict | None = None):
         with self.driver.session() as session:
             session.run(query, parameters or {})
 
-    def _execute_read(self, query: str, parameters: dict = None):
+    def _execute_read(self, query: str, parameters: dict | None = None):
         with self.driver.session() as session:
             return session.run(query, parameters or {}).data()
 
@@ -114,7 +115,7 @@ class Neo4jBuilder:
         return normalized
 
     def add_node(
-        self, node_id: str, label: str, properties: Dict[str, Any] = None
+        self, node_id: str, label: str, properties: dict[str, Any] | None = None
     ) -> str:
         if properties is None:
             properties = {}
@@ -136,7 +137,7 @@ class Neo4jBuilder:
         target: str,
         edge_type: str,
         confidence: float = 1.0,
-        properties: Dict[str, Any] = None,
+        properties: dict[str, Any] | None = None,
     ):
         if properties is None:
             properties = {}
@@ -160,8 +161,8 @@ class Neo4jBuilder:
         )
 
     def build_graph_from_extracted_data(
-        self, documents: List[Dict[str, Any]], ner_pipeline
-    ) -> Tuple[int, int]:
+        self, documents: list[dict[str, Any]], ner_pipeline
+    ) -> tuple[int, int]:
         """Same extraction flow as before, but hits Neo4j database."""
 
         # To avoid massive latency, we could batch but for this size we just call directly
@@ -355,7 +356,7 @@ class Neo4jBuilder:
         stats = self._execute_read("MATCH (n) RETURN count(n) as nodes")
         return stats[0]["nodes"] if stats else 0, 0
 
-    def get_compliance_gaps(self, current_date_str: str = None) -> List[Dict[str, Any]]:
+    def get_compliance_gaps(self, current_date_str: str | None = None) -> list[dict[str, Any]]:
         if not current_date_str:
             current_date_str = datetime.now().strftime("%Y-%m-%d")
 
@@ -387,7 +388,7 @@ class Neo4jBuilder:
         results = self._execute_read(query, {"current_date": current_date_str})
         return results
 
-    def get_failure_patterns(self) -> List[Dict[str, Any]]:
+    def get_failure_patterns(self) -> list[dict[str, Any]]:
         query = """
         MATCH (eq:EQUIPMENT)-[r:HAS_FAILURE]->(fail:FAILURE_MODE)
         WHERE r.weight >= 3
@@ -408,7 +409,7 @@ class Neo4jBuilder:
         """
         return self._execute_read(query)
 
-    def get_graph_stats(self) -> Dict[str, Any]:
+    def get_graph_stats(self) -> dict[str, Any]:
         return {
             "node_count": self._execute_read("MATCH (n) RETURN count(n) AS c")[0]["c"],
             "edge_count": self._execute_read("MATCH ()-[r]->() RETURN count(r) AS c")[

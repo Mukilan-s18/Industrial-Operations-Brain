@@ -16,7 +16,7 @@ MIN_TEXT_FOR_DETECTION = 50
 HINDI_CHAR_PATTERN = re.compile(r"[\u0900-\u097F]")
 
 
-def detect_language(text: str) -> Tuple[str, bool]:
+def detect_language(text: str) -> tuple[str, bool]:
     """
     Detect the primary language of the text.
 
@@ -42,7 +42,7 @@ def detect_language(text: str) -> Tuple[str, bool]:
 
     # Try langdetect for other languages
     try:
-        from langdetect import detect, LangDetectException
+        from langdetect import LangDetectException, detect
 
         detected = detect(text)
         return detected, False

@@ -15,7 +15,7 @@ from ingestion.models.schemas import ExtractedTable
 logger = logging.getLogger(__name__)
 
 
-def _rows_to_markdown(rows: List[List[str]]) -> str:
+def _rows_to_markdown(rows: list[list[str]]) -> str:
     """Convert a list of rows to a Markdown table string."""
     if not rows:
         return ""
@@ -39,9 +39,9 @@ def _rows_to_markdown(rows: List[List[str]]) -> str:
     return "\n".join(lines)
 
 
-def extract_tables_camelot(file_path: Path, page_num: int) -> List[ExtractedTable]:
+def extract_tables_camelot(file_path: Path, page_num: int) -> list[ExtractedTable]:
     """Extract tables using camelot (lattice → stream fallback)."""
-    tables: List[ExtractedTable] = []
+    tables: list[ExtractedTable] = []
     page_str = str(page_num + 1)  # camelot uses 1-indexed string
 
     try:
@@ -78,9 +78,9 @@ def extract_tables_camelot(file_path: Path, page_num: int) -> List[ExtractedTabl
     return tables
 
 
-def extract_tables_pdfplumber(file_path: Path, page_num: int) -> List[ExtractedTable]:
+def extract_tables_pdfplumber(file_path: Path, page_num: int) -> list[ExtractedTable]:
     """Extract tables using pdfplumber as fallback."""
-    tables: List[ExtractedTable] = []
+    tables: list[ExtractedTable] = []
     try:
         with pdfplumber.open(str(file_path)) as pdf:
             if page_num >= len(pdf.pages):
@@ -108,7 +108,7 @@ def extract_tables_pdfplumber(file_path: Path, page_num: int) -> List[ExtractedT
     return tables
 
 
-def extract_tables_from_page(file_path: Path, page_num: int) -> List[ExtractedTable]:
+def extract_tables_from_page(file_path: Path, page_num: int) -> list[ExtractedTable]:
     """
     Main entry: try camelot first, fall back to pdfplumber.
     Returns tables with both Markdown string and raw row/col structure.

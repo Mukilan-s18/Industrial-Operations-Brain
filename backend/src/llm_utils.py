@@ -3,9 +3,10 @@ Utility: Rate-limit-aware LLM wrapper with automatic retry + backoff.
 Wraps GoogleGenAI to handle 429 RESOURCE_EXHAUSTED errors gracefully.
 """
 
-import time
 import re
 import sys
+import time
+
 from llama_index.llms.google_genai import GoogleGenAI
 
 

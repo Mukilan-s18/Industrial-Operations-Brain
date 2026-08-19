@@ -1,15 +1,16 @@
-import yaml
-import networkx as nx
-from datetime import datetime
-from typing import List, Dict, Any, Tuple
 import json
 import os
 import re
+from datetime import datetime
+from typing import Any, Dict, List, Tuple
+
+import networkx as nx
+import yaml
 from rapidfuzz import fuzz
 
 
 class KnowledgeGraphBuilder:
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str | None = None):
         self.G = nx.MultiDiGraph()
 
         # Load config dynamically
@@ -77,7 +78,7 @@ class KnowledgeGraphBuilder:
         return normalized
 
     def add_node(
-        self, node_id: str, label: str, properties: Dict[str, Any] = None
+        self, node_id: str, label: str, properties: dict[str, Any] | None = None
     ) -> str:
         """Adds a node with a label and properties. Resolves aliases on insertion."""
         if properties is None:
@@ -102,7 +103,7 @@ class KnowledgeGraphBuilder:
         target: str,
         edge_type: str,
         confidence: float = 1.0,
-        properties: Dict[str, Any] = None,
+        properties: dict[str, Any] | None = None,
     ):
         """
         Adds an edge. If an edge with the same source, target, and edge_type exists,
@@ -139,8 +140,8 @@ class KnowledgeGraphBuilder:
             self.G.add_edge(source, target, **default_props)
 
     def build_graph_from_extracted_data(
-        self, documents: List[Dict[str, Any]], ner_pipeline
-    ) -> Tuple[int, int]:
+        self, documents: list[dict[str, Any]], ner_pipeline
+    ) -> tuple[int, int]:
         """
         Processes a list of raw documents, extracts entities via the NER pipeline,
         and constructs the networkx graph.
@@ -365,7 +366,7 @@ class KnowledgeGraphBuilder:
 
         return len(self.G.nodes), len(self.G.edges)
 
-    def get_compliance_gaps(self, current_date_str: str = None) -> List[Dict[str, Any]]:
+    def get_compliance_gaps(self, current_date_str: str | None = None) -> list[dict[str, Any]]:
         """
         Compliance gap query: find Equipment governed by a Regulation,
         but lacking a HAS_INSPECTION edge within the last 365 days.
@@ -462,7 +463,7 @@ class KnowledgeGraphBuilder:
 
         return gaps
 
-    def get_failure_patterns(self) -> List[Dict[str, Any]]:
+    def get_failure_patterns(self) -> list[dict[str, Any]]:
         """
         Failure patterns query: Find equipment with 3+ failures of the same type,
         and link to OEM manual suggestions.
@@ -519,7 +520,7 @@ class KnowledgeGraphBuilder:
 
         return patterns
 
-    def get_graph_stats(self) -> Dict[str, Any]:
+    def get_graph_stats(self) -> dict[str, Any]:
         """Calculates graph metadata and analytics."""
         nodes_by_type = {}
         for _, data in self.G.nodes(data=True):

@@ -1,6 +1,7 @@
 import pytest
-from backend.src.ner_pipeline import NERPipeline
+
 from backend.src.graph_builder import KnowledgeGraphBuilder
+from backend.src.ner_pipeline import NERPipeline
 
 
 @pytest.fixture

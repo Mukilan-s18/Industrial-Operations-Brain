@@ -1,7 +1,7 @@
 import json
 import os
-import time
 import random
+import time
 from datetime import datetime
 
 IOT_DATA_FILE = os.path.abspath(
