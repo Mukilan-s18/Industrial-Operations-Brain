@@ -60,12 +60,15 @@ def test_compute_corpus_coverage_exception():
 def test_get_current_user_local_mock_domain():
     token = "fake_token"
     mock_payload = {"sub": "test_user", "role": "operator"}
-    with patch(
-        "os.getenv",
-        side_effect=lambda k, d=None: (
-            "mock-domain.auth0.com" if k == "AUTH0_DOMAIN" else d
+    with (
+        patch(
+            "os.getenv",
+            side_effect=lambda k, d=None: (
+                "mock-domain.auth0.com" if k == "AUTH0_DOMAIN" else d
+            ),
         ),
-    ), patch("backend.dependencies.jwt.decode", return_value=mock_payload):
+        patch("backend.dependencies.jwt.decode", return_value=mock_payload),
+    ):
         user = get_current_user(token)
         assert user == {"username": "test_user", "role": "operator"}
 
@@ -73,12 +76,15 @@ def test_get_current_user_local_mock_domain():
 def test_get_current_user_missing_role():
     token = "fake_token"
     mock_payload = {"sub": "test_user"}
-    with patch(
-        "os.getenv",
-        side_effect=lambda k, d=None: (
-            "mock-domain.auth0.com" if k == "AUTH0_DOMAIN" else d
+    with (
+        patch(
+            "os.getenv",
+            side_effect=lambda k, d=None: (
+                "mock-domain.auth0.com" if k == "AUTH0_DOMAIN" else d
+            ),
         ),
-    ), patch("backend.dependencies.jwt.decode", return_value=mock_payload):
+        patch("backend.dependencies.jwt.decode", return_value=mock_payload),
+    ):
         with pytest.raises(HTTPException) as exc_info:
             get_current_user(token)
         assert exc_info.value.status_code == 401
@@ -91,16 +97,22 @@ def test_get_current_user_auth0_flow_success():
         "keys": [{"kid": "123", "kty": "RSA", "use": "sig", "n": "n", "e": "e"}]
     }
 
-    with patch(
-        "os.getenv",
-        side_effect=lambda k, d=None: "real.auth0.com" if k == "AUTH0_DOMAIN" else d,
-    ), patch("backend.dependencies.requests.get") as mock_get:
+    with (
+        patch(
+            "os.getenv",
+            side_effect=lambda k, d=None: (
+                "real.auth0.com" if k == "AUTH0_DOMAIN" else d
+            ),
+        ),
+        patch("backend.dependencies.requests.get") as mock_get,
+    ):
         mock_get.return_value.json.return_value = mock_jwks
-        with patch(
-            "backend.dependencies.jwt.get_unverified_header",
-            return_value={"kid": "123"},
-        ), patch(
-            "backend.dependencies.jwt.decode", return_value=mock_payload
+        with (
+            patch(
+                "backend.dependencies.jwt.get_unverified_header",
+                return_value={"kid": "123"},
+            ),
+            patch("backend.dependencies.jwt.decode", return_value=mock_payload),
         ):
             # Force JWKS CACHE None to test fetch
             deps._JWKS_CACHE = None
@@ -115,10 +127,15 @@ def test_get_current_user_auth0_flow_key_not_found():
         "keys": [{"kid": "456", "kty": "RSA", "use": "sig", "n": "n", "e": "e"}]
     }
 
-    with patch(
-        "os.getenv",
-        side_effect=lambda k, d=None: "real.auth0.com" if k == "AUTH0_DOMAIN" else d,
-    ), patch("backend.dependencies.requests.get") as mock_get:
+    with (
+        patch(
+            "os.getenv",
+            side_effect=lambda k, d=None: (
+                "real.auth0.com" if k == "AUTH0_DOMAIN" else d
+            ),
+        ),
+        patch("backend.dependencies.requests.get") as mock_get,
+    ):
         mock_get.return_value.json.return_value = mock_jwks
         with patch(
             "backend.dependencies.jwt.get_unverified_header",

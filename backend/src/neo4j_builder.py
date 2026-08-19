@@ -356,7 +356,9 @@ class Neo4jBuilder:
         stats = self._execute_read("MATCH (n) RETURN count(n) as nodes")
         return stats[0]["nodes"] if stats else 0, 0
 
-    def get_compliance_gaps(self, current_date_str: str | None = None) -> list[dict[str, Any]]:
+    def get_compliance_gaps(
+        self, current_date_str: str | None = None
+    ) -> list[dict[str, Any]]:
         if not current_date_str:
             current_date_str = datetime.now().strftime("%Y-%m-%d")
 

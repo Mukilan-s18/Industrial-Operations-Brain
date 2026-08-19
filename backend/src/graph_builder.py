@@ -366,7 +366,9 @@ class KnowledgeGraphBuilder:
 
         return len(self.G.nodes), len(self.G.edges)
 
-    def get_compliance_gaps(self, current_date_str: str | None = None) -> list[dict[str, Any]]:
+    def get_compliance_gaps(
+        self, current_date_str: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         Compliance gap query: find Equipment governed by a Regulation,
         but lacking a HAS_INSPECTION edge within the last 365 days.

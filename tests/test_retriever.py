@@ -121,9 +121,12 @@ def test_hybrid_graph_retriever_graph_integration():
 
 def test_pgvector_exception_handling():
     mock_embed = MagicMock()
-    with patch("backend.src.retriever.make_url"), patch(
-        "backend.src.retriever.PGVectorStore.from_params",
-        side_effect=Exception("DB Error"),
+    with (
+        patch("backend.src.retriever.make_url"),
+        patch(
+            "backend.src.retriever.PGVectorStore.from_params",
+            side_effect=Exception("DB Error"),
+        ),
     ):
         retriever = HybridGraphRetriever(
             collection_names=["docs"], embed_model=mock_embed, role="engineer"

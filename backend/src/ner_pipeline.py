@@ -10,7 +10,9 @@ from backend.src.schema import ExtractedEntity
 
 
 class NERPipeline:
-    def __init__(self, spacy_model: str = "en_core_web_sm", config_path: str | None = None):
+    def __init__(
+        self, spacy_model: str = "en_core_web_sm", config_path: str | None = None
+    ):
         self.nlp = spacy.load(spacy_model)
 
         # Load config dynamically
@@ -195,7 +197,9 @@ class NERPipeline:
 
         return extracted
 
-    def evaluate_accuracy(self, labeled_sentences_path: str | None = None) -> dict[str, Any]:
+    def evaluate_accuracy(
+        self, labeled_sentences_path: str | None = None
+    ) -> dict[str, Any]:
         """
         Loads the labeled sentences, extracts entities, and calculates precision,
         recall, and F1 score.

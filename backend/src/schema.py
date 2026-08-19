@@ -6,9 +6,7 @@ from pydantic import BaseModel, Field
 class Equipment(BaseModel):
     id: str = Field(..., description="Unique equipment tag, e.g. P-101")
     type: str = Field(..., description="Type of equipment, e.g., Pump, Compressor")
-    location: str | None = Field(
-        None, description="Physical location of the equipment"
-    )
+    location: str | None = Field(None, description="Physical location of the equipment")
 
 
 class Regulation(BaseModel):
@@ -29,9 +27,7 @@ class Parameter(BaseModel):
     name: str = Field(
         ..., description="Name of the parameter, e.g., Discharge Pressure"
     )
-    value: str | None = Field(
-        None, description="Parameter value, e.g. 4.5 bar, 82 C"
-    )
+    value: str | None = Field(None, description="Parameter value, e.g. 4.5 bar, 82 C")
 
 
 class Person(BaseModel):
