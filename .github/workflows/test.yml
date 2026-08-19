@@ -21,6 +21,8 @@ jobs:
         
     - name: Install system dependencies
       run: |
+        sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list || true
+        sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources || true
         sudo apt-get update
         sudo apt-get install -y tesseract-ocr libgl1 libglib2.0-0
         
